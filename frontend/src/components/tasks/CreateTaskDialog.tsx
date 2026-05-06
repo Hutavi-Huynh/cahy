@@ -46,7 +46,7 @@ const schema = z.object({
   leadDepartmentId: z.string().optional(),
   frequency: z.nativeEnum(TaskFrequency),
   deadline: z.string().optional(),
-  reminderBefore: z.number({ coerce: true }).min(0).optional(),
+  reminderBefore: z.preprocess((v) => (v === '' || v == null ? undefined : Number(v)), z.number().min(0).optional()),
 })
 
 type FormData = z.infer<typeof schema>
