@@ -44,7 +44,7 @@ const schema = z.object({
   content: z.string().optional(),
   linhVuc: z.string().optional(),
   leadDepartmentId: z.string().optional(),
-  frequency: z.nativeEnum(TaskFrequency).default(TaskFrequency.ONCE),
+  frequency: z.nativeEnum(TaskFrequency),
   deadline: z.string().optional(),
   reminderBefore: z.coerce.number().min(0).optional(),
 })
