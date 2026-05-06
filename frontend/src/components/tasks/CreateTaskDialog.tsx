@@ -46,7 +46,7 @@ const schema = z.object({
   leadDepartmentId: z.string().optional(),
   frequency: z.nativeEnum(TaskFrequency),
   deadline: z.string().optional(),
-  reminderBefore: z.preprocess((v) => (v === '' || v == null ? undefined : Number(v)), z.number().min(0).optional()),
+  reminderBefore: z.number().min(0).optional(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -183,7 +183,7 @@ export default function CreateTaskDialog({ open, onOpenChange, onSuccess }: Prop
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nhắc trước (ngày)</FormLabel>
-                    <FormControl><Input type="number" min={0} placeholder="0" {...field} /></FormControl>
+                    <FormControl><Input type="number" min={0} placeholder="0" value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
