@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CAHY – Hệ thống Quản lý Nhiệm vụ Công tác</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:   #0f2244;
+    --blue:   #1a3a6e;
+    --accent: #c8a43a;
+    --gold:   #f0c040;
+    --light:  #e8eef6;
+    --white:  #ffffff;
+    --green:  #22863a;
+    --red:    #c0392b;
+    --gray:   #6b7280;
+    --border: #d1dae8;
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #111827;
+    color: var(--navy);
+    overflow: hidden;
+  }
+
+  /* ── Slide container ── */
+  #deck { width: 100vw; height: 100vh; position: relative; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column;
+    width: 100%; height: 100%;
+  }
+  .slide.active { display: flex; }
+
+  /* ── Nav ── */
+  #nav {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(15,34,68,.85); backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,.15);
+    padding: 10px 20px; border-radius: 40px; z-index: 999;
+    color: #fff; font-size: 14px;
+  }
+  #nav button {
+    background: none; border: none; color: #fff; cursor: pointer;
+    font-size: 20px; line-height: 1; padding: 2px 6px; border-radius: 6px;
+    transition: background .15s;
+  }
+  #nav button:hover { background: rgba(255,255,255,.15); }
+  #counter { min-width: 60px; text-align: center; opacity: .8; }
+
+  /* ── Slide layouts ── */
+
+  /* COVER */
+  .s-cover {
+    background: linear-gradient(145deg, var(--navy) 0%, #1a3a6e 60%, #0f2244 100%);
+    justify-content: center; align-items: center; text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .s-cover::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 80% 20%, rgba(200,164,58,.12) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 10% 80%, rgba(26,58,110,.5) 0%, transparent 70%);
+  }
+  .s-cover .shield {
+    font-size: 80px; margin-bottom: 20px; filter: drop-shadow(0 4px 16px rgba(200,164,58,.4));
+  }
+  .s-cover h1 {
+    font-size: clamp(28px, 4vw, 52px); font-weight: 800;
+    color: var(--gold); letter-spacing: 2px; margin-bottom: 12px;
+    text-shadow: 0 2px 12px rgba(200,164,58,.3);
+  }
+  .s-cover .subtitle {
+    font-size: clamp(14px, 2vw, 22px); color: rgba(255,255,255,.75);
+    margin-bottom: 32px; font-weight: 300;
+  }
+  .s-cover .tagline {
+    display: inline-block;
+    border: 1px solid rgba(200,164,58,.4);
+    color: var(--gold); padding: 8px 24px; border-radius: 30px;
+    font-size: 13px; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .cover-meta {
+    position: absolute; bottom: 90px; left: 0; right: 0;
+    display: flex; justify-content: center; gap: 40px;
+    color: rgba(255,255,255,.45); font-size: 12px;
+  }
+
+  /* STANDARD white slide */
+  .s-white {
+    background: #f8fafc;
+  }
+  .slide-header {
+    background: var(--navy);
+    padding: 22px 48px 18px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .slide-header .icon { font-size: 28px; }
+  .slide-header h2 {
+    color: var(--white); font-size: clamp(18px, 2.5vw, 28px); font-weight: 700;
+  }
+  .slide-header .badge {
+    margin-left: auto;
+    background: rgba(200,164,58,.25); color: var(--gold);
+    padding: 4px 14px; border-radius: 20px; font-size: 12px; border: 1px solid rgba(200,164,58,.3);
+  }
+  .slide-body {
+    flex: 1; padding: 32px 48px; overflow: hidden;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+
+  /* Cards */
+  .card {
+    background: #fff; border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px 24px;
+    box-shadow: 0 1px 4px rgba(15,34,68,.06);
+  }
+  .card-title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--gray); font-weight: 600; margin-bottom: 8px;
+  }
+  .card-value {
+    font-size: 38px; font-weight: 800; line-height: 1;
+  }
+  .card-value.blue { color: #1d4ed8; }
+  .card-value.yellow { color: #d97706; }
+  .card-value.green { color: #16a34a; }
+  .card-value.red { color: #dc2626; }
+
+  /* Grid helpers */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+  /* Feature list */
+  .feat-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .feat-list li {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: #fff; border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 16px;
+    font-size: clamp(12px, 1.2vw, 15px);
+  }
+  .feat-list li .ico { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .feat-list li strong { display: block; font-weight: 600; color: var(--navy); }
+  .feat-list li span { color: var(--gray); font-size: 12px; }
+
+  /* Role cards */
+  .role-card {
+    border-radius: 10px; padding: 20px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .role-card.admin { background: linear-gradient(135deg, #0f2244, #1a3a6e); color: #fff; }
+  .role-card.lead { background: linear-gradient(135deg, #1e3a5f, #2563eb22); border: 1px solid #3b82f6; }
+  .role-card.member { background: linear-gradient(135deg, #f8fafc, #e8eef6); border: 1px solid var(--border); }
+  .role-title { font-size: 16px; font-weight: 700; }
+  .role-card.admin .role-title { color: var(--gold); }
+  .role-card.lead .role-title { color: #1d4ed8; }
+  .role-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 600; width: fit-content;
+  }
+  .role-badge.admin { background: rgba(200,164,58,.2); color: var(--gold); }
+  .role-badge.lead { background: rgba(37,99,235,.15); color: #1d4ed8; }
+  .role-badge.member { background: rgba(107,114,128,.12); color: var(--gray); }
+  .perm-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+  .perm-list li { font-size: 12px; display: flex; align-items: center; gap: 6px; }
+  .perm-list li::before { content: '✓'; color: var(--green); font-weight: 700; }
+  .role-card.admin .perm-list li { color: rgba(255,255,255,.8); }
+  .role-card.admin .perm-list li::before { color: var(--gold); }
+
+  /* Status badges */
+  .status {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
+  }
+  .status.pending { background: #f3f4f6; color: #6b7280; }
+  .status.in_progress { background: #fef3c7; color: #d97706; }
+  .status.completed { background: #dcfce7; color: #16a34a; }
+  .status.overdue { background: #fee2e2; color: #dc2626; }
+  .status::before { content: '●'; font-size: 8px; }
+
+  /* Flow diagram */
+  .flow {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0; flex-wrap: wrap;
+  }
+  .flow-step {
+    background: #fff; border: 2px solid var(--border);
+    border-radius: 10px; padding: 14px 20px;
+    text-align: center; font-size: 13px; font-weight: 600;
+    min-width: 110px; position: relative;
+  }
+  .flow-step .step-icon { font-size: 24px; display: block; margin-bottom: 4px; }
+  .flow-step.active-step { border-color: #3b82f6; background: #eff6ff; color: #1d4ed8; }
+  .flow-step.done-step { border-color: #16a34a; background: #f0fdf4; color: #16a34a; }
+  .flow-step.warn-step { border-color: #f59e0b; background: #fffbeb; color: #d97706; }
+  .flow-step.danger-step { border-color: #dc2626; background: #fef2f2; color: #dc2626; }
+  .flow-arrow {
+    color: var(--gray); font-size: 20px; padding: 0 6px; margin-top: -6px;
+  }
+
+  /* Architecture */
+  .arch-box {
+    border-radius: 10px; padding: 16px 20px; text-align: center;
+  }
+  .arch-box h4 { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .arch-box .tech-chips { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+  .chip {
+    background: rgba(255,255,255,.15); color: inherit;
+    border: 1px solid rgba(255,255,255,.2);
+    padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 500;
+  }
+  .arch-box.front { background: linear-gradient(135deg, #1e3a5f, #2563eb); color: #fff; }
+  .arch-box.back { background: linear-gradient(135deg, #0f2244, #1a3a6e); color: #fff; }
+  .arch-box.db { background: linear-gradient(135deg, #1f2937, #374151); color: #fff; }
+  .arch-box.lan { background: linear-gradient(135deg, #065f46, #059669); color: #fff; }
+  .arch-arrow { font-size: 28px; color: var(--gray); display: flex; align-items: center; }
+
+  /* Module box */
+  .mod-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .mod-box {
+    border-radius: 8px; padding: 14px; text-align: center;
+    border: 1px solid var(--border); background: #fff;
+  }
+  .mod-box .mod-icon { font-size: 28px; display: block; margin-bottom: 6px; }
+  .mod-box .mod-name { font-size: 11px; font-weight: 600; color: var(--navy); }
+  .mod-box .mod-sub { font-size: 10px; color: var(--gray); margin-top: 2px; }
+
+  /* Summary / closing */
+  .s-close {
+    background: linear-gradient(145deg, var(--navy) 0%, #1a3a6e 60%, #0f2244 100%);
+    justify-content: center; align-items: center; text-align: center;
+    color: #fff; gap: 24px;
+  }
+  .s-close h2 { font-size: clamp(24px, 3.5vw, 42px); font-weight: 800; color: var(--gold); }
+  .s-close p { color: rgba(255,255,255,.7); font-size: clamp(13px, 1.5vw, 18px); }
+  .summary-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    width: min(700px, 90%);
+  }
+  .sum-item {
+    background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+    border-radius: 10px; padding: 16px; text-align: center;
+  }
+  .sum-num { font-size: 36px; font-weight: 800; color: var(--gold); }
+  .sum-lbl { font-size: 12px; color: rgba(255,255,255,.6); margin-top: 4px; }
+
+  /* Table mock */
+  .mock-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .mock-table th {
+    background: var(--navy); color: #fff; padding: 8px 12px; text-align: left;
+    font-weight: 600; font-size: 11px;
+  }
+  .mock-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  .mock-table tr:nth-child(even) td { background: #f8fafc; }
+
+  /* Info row */
+  .info-row { display: flex; gap: 10px; align-items: flex-start; }
+  .info-row .label { font-size: 11px; color: var(--gray); min-width: 100px; }
+  .info-row .value { font-size: 13px; font-weight: 600; color: var(--navy); }
+
+  /* Progress bar */
+  .prog-bar { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 4px; }
+
+  /* Section divider */
+  .section-divider {
+    display: flex; align-items: center; gap: 12px; margin: 4px 0;
+  }
+  .section-divider span { font-size: 11px; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--gray); white-space: nowrap; font-weight: 600; }
+  .section-divider::before, .section-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+</style>
+</head>
+<body>
+
+<div id="deck">
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SLIDE 1 — COVER                                 -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="slide s-cover active">
+    <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;">
+      <div class="shield">🛡️</div>
+      <div style="font-size:12px;letter-spacing:3px;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:4px;">Hệ thống nội bộ LAN</div>
+      <h1>CAHY</h1>
+      <div class="subtitle">Hệ thống Quản lý Nhiệm vụ Công tác<br>Công an tỉnh</div>
+      <div class="tagline">Demo sản phẩm · 2026</div>
+    </div>
+    <div class="cover-meta">
+      <span>🖥️ Nội bộ mạng LAN</span>
+      <span>🔒 Phân quyền 3 cấp</span>
+      <span>📊 Báo cáo tự động</span>
+      <span>📎 Đính kèm tài liệu</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SLIDE 2 — BỐI CẢNH & VẤN ĐỀ                   -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="slide s-white">
+    <div class="slide-header">
+      <span class="icon">🎯</span>
+      <h2>Bối cảnh &amp; Vấn đề cần giải quyết</h2>
+    </div>
+    <div class="slide-body">
+      <div class="grid-2" style="flex:1;gap:20px;">
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="card" style="border-left:4px solid #dc2626;">
+            <div class="card-title">❌ Thực trạng trước đây</div>
+            <ul class="feat-list" style="gap:8px;">
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">📄</span>
+                <div><strong>Phân công bằng văn bản giấy</strong><span>Khó tra cứu, dễ thất lạc, chậm cập nhật tiến độ</span></div>
+              </li>
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">📞</span>
+                <div><strong>Đôn đốc qua điện thoại / họp trực tiếp</strong><span>Tốn thời gian, không lưu vết lịch sử</span></div>
+              </li>
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">📊</span>
+                <div><strong>Báo cáo tổng hợp thủ công</strong><span>Mất nhiều giờ mỗi lần tổng hợp số liệu từ các phòng</span></div>
+              </li>
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">⏰</span>
+                <div><strong>Không phát hiện sớm nhiệm vụ quá hạn</strong><span>Không có hệ thống cảnh báo tự động</span></div>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="card" style="border-left:4px solid #16a34a;">
+            <div class="card-title">✅ Giải pháp CAHY mang lại</div>
+            <ul class="feat-list" style="gap:8px;">
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">💻</span>
+                <div><strong>Phân công nhiệm vụ trực tuyến</strong><span>Giao việc, theo dõi tiến độ ngay trên hệ thống</span></div>
+              </li>
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">📬</span>
+                <div><strong>Thông báo &amp; nhắc nhở tự động</strong><span>Cảnh báo đến hạn trước N ngày, phát hiện quá hạn</span></div>
+              </li>
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">📈</span>
+                <div><strong>Báo cáo thống kê tức thời</strong><span>Số liệu theo đơn vị, theo trạng thái, xuất Excel 1 click</span></div>
+              </li>
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">🔒</span>
+                <div><strong>Bảo mật nội bộ LAN</strong><span>Không cần Internet, không rò rỉ dữ liệu ra ngoài</span></div>
+              </li>
+            </ul>
+          </div>
+          <div class="card" style="background:linear-gradient(135deg,#0f2244,#1a3a6e);color:#fff;border:none;">
+            <div style="color:rgba(255,255,255,.6);font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Phạm vi triển khai</div>
+            <div style="font-size:14px;font-weight:600;">🏢 Công an tỉnh · 16 phòng ban · 30+ cán bộ</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:4px;">Hệ thống chạy hoàn toàn trên mạng LAN nội bộ</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SLIDE 3 — TỔNG QUAN HỆ THỐNG                   -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="slide s-white">
+    <div class="slide-header">
+      <span class="icon">🏗️</span>
+      <h2>Tổng quan kiến trúc hệ thống</h2>
+    </div>
+    <div class="slide-body">
+      <!-- Architecture row -->
+      <div style="display:flex;align-items:center;gap:12px;justify-content:center;">
+        <div class="arch-box lan" style="width:140px;">
+          <h4>Mạng LAN Nội bộ</h4>
+          <div class="tech-chips">
+            <span class="chip">Không Internet</span>
+            <span class="chip">Bảo mật cao</span>
+          </div>
+        </div>
+        <div class="arch-arrow">⟺</div>
+        <div class="arch-box front" style="flex:1;">
+          <h4>Giao diện (Frontend)</h4>
+          <div class="tech-chips">
+            <span class="chip">React 19</span>
+            <span class="chip">TypeScript</span>
+            <span class="chip">Vite</span>
+            <span class="chip">shadcn/ui</span>
+            <span class="chip">Tailwind</span>
+            <span class="chip">React Query</span>
+          </div>
+        </div>
+        <div class="arch-arrow">⟺</div>
+        <div class="arch-box back" style="flex:1;">
+          <h4>Máy chủ (Backend)</h4>
+          <div class="tech-chips">
+            <span class="chip">NestJS 11</span>
+            <span class="chip">TypeScript</span>
+            <span class="chip">TypeORM</span>
+            <span class="chip">JWT Auth</span>
+            <span class="chip">REST API</span>
+            <span class="chip">Swagger</span>
+          </div>
+        </div>
+        <div class="arch-arrow">⟺</div>
+        <div class="arch-box db" style="width:140px;">
+          <h4>Cơ sở dữ liệu</h4>
+          <div class="tech-chips">
+            <span class="chip">PostgreSQL</span>
+            <span class="chip">8 entities</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modules grid -->
+      <div>
+        <div class="section-divider"><span>Các module chức năng</span></div>
+        <div class="mod-grid" style="margin-top:12px;">
+          <div class="mod-box" style="border-top:3px solid #0f2244;">
+            <span class="mod-icon">🔐</span>
+            <div class="mod-name">Xác thực</div>
+            <div class="mod-sub">Đăng nhập JWT</div>
+          </div>
+          <div class="mod-box" style="border-top:3px solid #1d4ed8;">
+            <span class="mod-icon">📋</span>
+            <div class="mod-name">Nhiệm vụ</div>
+            <div class="mod-sub">CRUD + phân công</div>
+          </div>
+          <div class="mod-box" style="border-top:3px solid #7c3aed;">
+            <span class="mod-icon">🏢</span>
+            <div class="mod-name">Đơn vị</div>
+            <div class="mod-sub">Quản lý phòng ban</div>
+          </div>
+          <div class="mod-box" style="border-top:3px solid #0891b2;">
+            <span class="mod-icon">👥</span>
+            <div class="mod-name">Tài khoản</div>
+            <div class="mod-sub">Người dùng &amp; phân quyền</div>
+          </div>
+          <div class="mod-box" style="border-top:3px solid #16a34a;">
+            <span class="mod-icon">📊</span>
+            <div class="mod-name">Báo cáo</div>
+            <div class="mod-sub">Thống kê + xuất Excel</div>
+          </div>
+          <div class="mod-box" style="border-top:3px solid #d97706;">
+            <span class="mod-icon">🔔</span>
+            <div class="mod-name">Thông báo</div>
+            <div class="mod-sub">Cảnh báo tự động</div>
+          </div>
+          <div class="mod-box" style="border-top:3px solid #dc2626;">
+            <span class="mod-icon">📝</span>
+            <div class="mod-name">Kết quả</div>
+            <div class="mod-sub">Báo cáo tiến độ</div>
+          </div>
+          <div class="mod-box" style="border-top:3px solid #b45309;">
+            <span class="mod-icon">🗂️</span>
+            <div class="mod-name">Giải trình</div>
+            <div class="mod-sub">Xử lý quá hạn</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick stats -->
+      <div class="grid-4" style="margin-top:4px;">
+        <div class="card" style="text-align:center;padding:14px;">
+          <div style="font-size:28px;font-weight:800;color:#1d4ed8;">16</div>
+          <div style="font-size:11px;color:var(--gray);">Phòng ban</div>
+        </div>
+        <div class="card" style="text-align:center;padding:14px;">
+          <div style="font-size:28px;font-weight:800;color:#7c3aed;">30+</div>
+          <div style="font-size:11px;color:var(--gray);">Tài khoản</div>
+        </div>
+        <div class="card" style="text-align:center;padding:14px;">
+          <div style="font-size:28px;font-weight:800;color:#16a34a;">3</div>
+          <div style="font-size:11px;color:var(--gray);">Cấp phân quyền</div>
+        </div>
+        <div class="card" style="text-align:center;padding:14px;">
+          <div style="font-size:28px;font-weight:800;color:#d97706;">8</div>
+          <div style="font-size:11px;color:var(--gray);">Bảng dữ liệu</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SLIDE 4 — PHÂN QUYỀN                           -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="slide s-white">
+    <div class="slide-header">
+      <span class="icon">🔐</span>
+      <h2>Phân quyền người dùng</h2>
+      <span class="badge">3 cấp độ</span>
+    </div>
+    <div class="slide-body">
+      <div class="grid-3" style="flex:1;">
+
+        <!-- Admin -->
+        <div class="role-card admin">
+          <div>
+            <div class="role-badge admin">Quản trị hệ thống</div>
+            <div class="role-title" style="margin-top:8px;">👑 ADMIN</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:2px;">Lãnh đạo / PV01 / Ban giám đốc</div>
+          </div>
+          <ul class="perm-list">
+            <li>Tạo, chỉnh sửa, xóa nhiệm vụ</li>
+            <li>Phân công đơn vị chủ trì &amp; phối hợp</li>
+            <li>Xem toàn bộ nhiệm vụ mọi đơn vị</li>
+            <li>Quản lý tài khoản người dùng</li>
+            <li>Quản lý danh mục đơn vị</li>
+            <li>Xem báo cáo thống kê toàn hệ thống</li>
+            <li>Xuất báo cáo Excel</li>
+            <li>Gửi thông báo hệ thống</li>
+          </ul>
+        </div>
+
+        <!-- Unit Lead -->
+        <div class="role-card member">
+          <div>
+            <div class="role-badge lead">Phụ trách đơn vị</div>
+            <div class="role-title" style="margin-top:8px;">🎖️ TRƯỞNG ĐƠN VỊ</div>
+            <div style="font-size:12px;color:var(--gray);margin-top:2px;">Trưởng phòng / Phụ trách đơn vị</div>
+          </div>
+          <ul class="perm-list" style="color:var(--navy);">
+            <li>Xem nhiệm vụ của phòng mình</li>
+            <li>Xem nhiệm vụ phòng mình phối hợp</li>
+            <li>Gửi báo cáo kết quả thực hiện</li>
+            <li>Đính kèm file báo cáo</li>
+            <li>Nộp giải trình khi quá hạn</li>
+            <li>Xem thông báo liên quan</li>
+          </ul>
+          <div style="margin-top:4px;padding:10px;background:rgba(248, 250, 255, 0.08);border-radius:8px;font-size:11px;color:#1d4ed8;border:1px solid rgba(37,99,235,.2);">
+            ⚠️ Chỉ xem được nhiệm vụ của phòng ban mình, không thấy dữ liệu phòng khác
+          </div>
+        </div>
+
+        <!-- Unit Member -->
+        <div class="role-card member">
+          <div>
+            <div class="role-badge member">Cán bộ đơn vị</div>
+            <div class="role-title" style="margin-top:8px;">👤 CÁN BỘ</div>
+            <div style="font-size:12px;color:var(--gray);margin-top:2px;">Cán bộ thuộc các phòng ban</div>
+          </div>
+          <ul class="perm-list" style="color:var(--navy);">
+            <li>Xem nhiệm vụ của phòng mình</li>
+            <li>Xem nhiệm vụ phòng mình phối hợp</li>
+            <li>Gửi báo cáo kết quả thực hiện</li>
+            <li>Đính kèm file minh chứng</li>
+            <li>Nộp giải trình khi quá hạn</li>
+            <li>Xem thông báo cá nhân</li>
+          </ul>
+          <div style="margin-top:4px;padding:10px;background:#f8fafc;border-radius:8px;font-size:11px;color:var(--gray);border:1px solid var(--border);">
+            ℹ️ Quyền tương tự Trưởng đơn vị — hệ thống có thể mở rộng phân cấp trong nội bộ phòng
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Login security note -->
+      <div class="card" style="background:#0f2244;border:none;color:#fff;padding:14px 20px;">
+        <div style="display:flex;gap:16px;align-items:center;">
+          <span style="font-size:24px;">🔑</span>
+          <div>
+            <div style="font-weight:600;margin-bottom:4px;">Bảo mật đăng nhập</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.65);">
+              JWT Token · Mã hoá mật khẩu bcrypt · Ghi log lịch sử đăng nhập (IP, thời gian, thành công/thất bại) · Tự động lọc dữ liệu theo phòng ban sau đăng nhập
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SLIDE 5 — DASHBOARD                             -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="slide s-white">
+    <div class="slide-header">
+      <span class="icon">📊</span>
+      <h2>Dashboard – Trang Tổng quan</h2>
+    </div>
+    <div class="slide-body">
+      <div class="grid-2" style="flex:1;gap:20px;">
+
+        <!-- Left: description -->
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="card" style="border-left:4px solid #0f2244;">
+            <div class="card-title">Mục đích</div>
+            <p style="font-size:13px;color:var(--gray);line-height:1.6;">
+              Trang đầu tiên sau khi đăng nhập. Cung cấp cái nhìn tổng thể về tình hình nhiệm vụ công tác và các việc cần xử lý gần đây.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Hiển thị theo phân quyền</div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+              <div style="display:flex;gap:10px;align-items:center;padding:8px;background:#f0f7ff;border-radius:6px;">
+                <span>👑</span>
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:#0f2244;">Admin</div>
+                  <div style="font-size:11px;color:var(--gray);">4 thẻ thống kê toàn hệ thống + danh sách việc gần đây</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center;padding:8px;background:#f8fafc;border-radius:6px;">
+                <span>🎖️</span>
+                <div>
+                  <div style="font-size:12px;font-weight:600;color:#0f2244;">Cán bộ / Trưởng đơn vị</div>
+                  <div style="font-size:11px;color:var(--gray);">Danh sách 5 nhiệm vụ gần đây nhất của phòng mình</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Thẻ thống kê (Admin)</div>
+            <div class="grid-2" style="gap:8px;margin-top:4px;">
+              <div style="text-align:center;padding:10px;background:#eff6ff;border-radius:8px;">
+                <div style="font-size:24px;font-weight:800;color:#1d4ed8;">21</div>
+                <div style="font-size:10px;color:var(--gray);">Tổng công việc</div>
+              </div>
+              <div style="text-align:center;padding:10px;background:#fef9c3;border-radius:8px;">
+                <div style="font-size:24px;font-weight:800;color:#d97706;">8</div>
+                <div style="font-size:10px;color:var(--gray);">Đang thực hiện</div>
+              </div>
+              <div style="text-align:center;padding:10px;background:#f0fdf4;border-radius:8px;">
+                <div style="font-size:24px;font-weight:800;color:#16a34a;">5</div>
+                <div style="font-size:10px;color:var(--gray);">Hoàn thành</div>
+              </div>
+              <div style="text-align:center;padding:10px;background:#fef2f2;border-radius:8px;">
+                <div style="font-size:24px;font-weight:800;color:#dc2626;">3</div>
+                <div style="font-size:10px;color:var(--gray);">Quá hạn</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: mock recent tasks -->
+        <div class="card" style="display:flex;flex-direction:column;gap:0;">
+          <div class="card-title" style="margin-bottom:12px;">Công việc gần đây</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:12px;font-weight:600;">Tuần tra kiểm soát giao thông QL1A</div>
+                <div style="font-size:10px;color:var(--gray);margin-top:2px;">P. Cảnh sát Giao thông · Hạn: 09/05/2026</div>
+              </div>
+              <span class="status in_progress">Đang thực hiện</span>
+            </div>
+            <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:12px;font-weight:600;">Kiểm tra PCCC tại cơ sở kinh doanh</div>
+                <div style="font-size:10px;color:var(--gray);margin-top:2px;">P. Phòng chống Cứu nạn · Hạn: 14/05/2026</div>
+              </div>
+              <span class="status in_progress">Đang thực hiện</span>
+            </div>
+            <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:12px;font-weight:600;">Điều tra vụ trộm cắp tại phường Hòa Phú</div>
+                <div style="font-size:10px;color:var(--gray);margin-top:2px;">P. Cảnh sát Hình sự · Hạn: 13/05/2026</div>
+              </div>
+              <span class="status in_progress">Đang thực hiện</span>
+            </div>
+            <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:12px;font-weight:600;">Báo cáo tình hình tệ nạn xã hội Q.II</div>
+                <div style="font-size:10px;color:var(--gray);margin-top:2px;">P. Cảnh sát An toàn xã hội · Hạn: 03/05/2026</div>
+              </div>
+              <span class="status overdue">Quá hạn</span>
+            </div>
+            <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:12px;font-weight:600;">Điều tra vụ cố ý gây thương tích xã Tân Bình</div>
+                <div style="font-size:10px;color:var(--gray);margin-top:2px;">P. Cảnh sát Hình sự · Hạn: 01/05/2026</div>
+              </div>
+              <span class="status completed">Hoàn thành</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SLIDE 6 — QUẢN LÝ NHIỆM VỤ                     -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="slide s-white">
+    <div class="slide-header">
+      <span class="icon">📋</span>
+      <h2>Quản lý Nhiệm vụ Công tác</h2>
+      <span class="badge">Chức năng cốt lõi</span>
+    </div>
+    <div class="slide-body">
+      <div class="grid-2" style="flex:1;gap:20px;">
+
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <!-- Create task features -->
+          <div class="card" style="border-left:4px solid #1d4ed8;">
+            <div class="card-title">Thông tin nhiệm vụ (Admin tạo)</div>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;">
+              <div class="info-row"><span class="label">📌 Tên nhiệm vụ</span><span class="value">Tiêu đề + nội dung chi tiết</span></div>
+              <div class="info-row"><span class="label">🏢 Chủ trì</span><span class="value">1 đơn vị chịu trách nhiệm chính</span></div>
+              <div class="info-row"><span class="label">🤝 Phối hợp</span><span class="value">Nhiều đơn vị hỗ trợ thực hiện</span></div>
+              <div class="info-row"><span class="label">📅 Chu kỳ</span><span class="value">Một lần / Hàng tuần / Tháng / Quý</span></div>
+              <div class="info-row"><span class="label">⏰ Thời hạn</span><span class="value">Ngày giờ cụ thể</span></div>
+              <div class="info-row"><span class="label">🔔 Nhắc trước</span><span class="value">N ngày trước deadline</span></div>
+              <div class="info-row"><span class="label">🎯 Kết quả mong đợi</span><span class="value">Mô tả tiêu chí hoàn thành</span></div>
+            </div>
+          </div>
+
+          <!-- Filter panel -->
+          <div class="card">
+            <div class="card-title">Bộ lọc danh sách</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+              <div style="background:#f0f7ff;color:#1d4ed8;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;">🔍 Tìm theo tên / đơn vị</div>
+              <div style="background:#f0f7ff;color:#1d4ed8;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;">📁 Lọc theo trạng thái</div>
+              <div style="background:#f0f7ff;color:#1d4ed8;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;">🏢 Lọc theo đơn vị (Admin)</div>
+              <div style="background:#f0f7ff;color:#1d4ed8;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;">📆 Lọc theo thời hạn</div>
+            </div>
+          </div>
+
+          <!-- Status flow -->
+          <div class="card">
+            <div class="card-title" style="margin-bottom:10px;">Vòng đời trạng thái</div>
+            <div class="flow">
+              <div class="flow-step">
+                <span class="step-icon">🆕</span>Chưa thực hiện
+              </div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-step active-step">
+                <span class="step-icon">▶️</span>Đang thực hiện
+              </div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-step done-step">
+                <span class="step-icon">✅</span>Hoàn thành
+              </div>
+            </div>
+            <div class="flow" style="margin-top:8px;">
+              <div style="flex:1;border-top:2px dashed #fca5a5;margin:0 8px;"></div>
+              <div class="flow-step danger-step" style="font-size:11px;">
+                <span class="step-icon">⚠️</span>Quá hạn (tự động)
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: mock table -->
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div style="padding:12px 16px;font-size:12px;font-weight:600;color:var(--navy);border-bottom:1px solid var(--border);">Danh sách nhiệm vụ</div>
+          <table class="mock-table">
+            <thead>
+              <tr>
+                <th>Tên nhiệm vụ</th>
+                <th>Đơn vị chủ trì</th>
+                <th>Chu kỳ</th>
+                <th>Thời hạn</th>
+                <th>Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-weight:600;max-width:160px;">Tuần tra giao thông QL1A</td>
+                <td style="font-size:11px;">P.Cảnh sát GT</td>
+                <td>Hàng tuần</td>
+                <td>09/05/2026</td>
+                <td><span class="status in_progress">Đang thực hiện</span></td>
+              </tr>
+              <tr>
+                <td style="font-weight:600;max-width:160px;">Kiểm tra PCCC cơ sở KD</td>
+                <td style="font-size:11px;">P.PCCC</td>
+                <td>Hàng tháng</td>
+                <td>14/05/2026</td>
+                <td><span class="status in_progress">Đang thực hiện</span></td>
+              </tr>
+              <tr>
+                <td style="font-weight:600;max-width:160px;">Bảo vệ an ninh Lễ hội</td>
+                <td style="font-size:11px;">P.Cảnh sát CĐ</td>
+                <td>Một lần</td>
+                <td>16/05/2026</td>
+                <td><span class="status pending">Chưa thực hiện</span></td>
+              </tr>
+              <tr>
+                <td style="font-weight:600;max-width:160px;">Điều tra vụ trộm tài sản</td>
+                <td style="font-size:11px;">P.CS Hình sự</td>
+                <td>Một lần</td>
+                <td>13/05/2026</td>
+                <td><span class="status in_progress">Đang thực hiện</span></td>
+              </tr>
+              <tr>
+                <td style="font-weight:600;max-width:160px;">Báo cáo tệ nạn Q.II</td>
+                <td style="font-size:11px;">P.CS ATXH</td>
+                <td>Hàng quý</td>
+                <td style="color:#dc2626;font-weight:600;">03/05/2026</td>
+                <td><span class="status overdue">Quá hạn</span></td>
+              </tr>
+              <tr>
+                <td style="font-weight:600;max-width:160px;">Điều tra vụ CGTT Tân Bình</td>
+                <td style="font-size:11px;">P.CS Hình sự</td>
+                <td>Một lần</td>
+                <td>01/05/2026</td>
+                <td><span class="status completed">Hoàn thành</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SLIDE 7 — CHI TIẾT NHIỆM VỤ                    -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="slide s-white">
+    <div class="slide-header">
+      <span class="icon">🔍</span>
+      <h2>Chi tiết Nhiệm vụ – Báo cáo &amp; Giải trình</h2>
+    </div>
+    <div class="slide-body">
+      <div class="grid-2" style="flex:1;gap:20px;">
+
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <!-- Task info mock -->
+          <div class="card" style="border-top:3px solid #1d4ed8;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+              <div>
+                <div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;">Nhiệm vụ</div>
+                <div style="font-size:14px;font-weight:700;color:var(--navy);margin-top:2px;">Điều tra vụ trộm cắp tài sản tại phường Hòa Phú</div>
+              </div>
+              <span class="status in_progress">Đang thực hiện</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;color:var(--gray);">
+              <div>🏢 Chủ trì: <strong style="color:var(--navy);">P.CS Hình sự</strong></div>
+              <div>🤝 Phối hợp: <strong style="color:var(--navy);">P.CS ATXH</strong></div>
+              <div>📅 Chu kỳ: <strong style="color:var(--navy);">Một lần</strong></div>
+              <div>⏰ Hạn: <strong style="color:var(--navy);">13/05/2026</strong></div>
+            </div>
+            <!-- Progress bar -->
+            <div style="margin-top:12px;">
+              <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:4px;">
+                <span style="color:var(--gray);">Tiến độ hoàn thành</span>
+                <span style="font-weight:700;color:#1d4ed8;">40%</span>
+              </div>
+              <div class="prog-bar"><div class="prog-fill" style="width:40%;background:#3b82f6;"></div></div>
+            </div>
+          </div>
+
+          <!-- Result submission mock -->
+          <div class="card">
+            <div class="card-title">Báo cáo kết quả thực hiện (Cán bộ gửi)</div>
+            <div style="margin-top:8px;background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:10px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                <span style="font-size:12px;font-weight:600;">P.CS Hình sự</span>
+                <span style="font-size:10px;color:var(--gray);">06/05/2026 15:30</span>
+              </div>
+              <div style="font-size:11px;color:var(--gray);">Đã phỏng vấn 5 nhân chứng, thu thập 3 đoạn video camera an ninh, xác định được 2 nghi phạm.</div>
+              <div style="margin-top:6px;">
+                <span style="background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;">40% hoàn thành</span>
+              </div>
+            </div>
+            <div style="margin-top:8px;font-size:11px;color:var(--gray);">
+              📎 Đính kèm: PDF, Word, Excel, ảnh (tối đa 10MB/file)
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <!-- Overdue explanation mock -->
+          <div class="card" style="border:1px solid #fca5a5;background:#fff5f5;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span>⚠️</span>
+              <div style="font-size:13px;font-weight:700;color:#dc2626;">Giải trình chậm muộn</div>
+              <span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;">Quá hạn 3 ngày</span>
+            </div>
+            <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:10px;font-size:11px;color:#7f1d1d;">
+              Khi nhiệm vụ quá hạn → đơn vị phải nộp bản giải trình trình bày lý do và biện pháp khắc phục, có thể đính kèm tài liệu minh chứng.
+            </div>
+          </div>
+
+          <!-- Admin actions -->
+          <div class="card" style="border-left:4px solid #d97706;">
+            <div class="card-title">Quyền Admin trên chi tiết nhiệm vụ</div>
+            <ul class="feat-list" style="gap:6px;">
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">✏️</span>
+                <div><strong>Chỉnh sửa nhiệm vụ</strong><span>Cập nhật thông tin, gia hạn deadline</span></div>
+              </li>
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">📊</span>
+                <div><strong>Xem tất cả báo cáo</strong><span>Xem kết quả từ đơn vị chủ trì &amp; phối hợp</span></div>
+              </li>
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">📝</span>
+                <div><strong>Xem bản giải trình</strong><span>Kiểm tra lý do chậm muộn của đơn vị</span></div>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Upload -->
+          <div class="card" style="background:#0f2244;border:none;color:#fff;">
+            <div style="font-weight:600;margin-bottom:8px;color:var(--gold);">📎 Upload tài liệu đính kèm</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              <span style="background:rgba(255,255,255,.15);padding:4px 10px;border-radius:6px;font-size:11px;">📄 PDF</span>
+              <span style="background:rgba(255,255,255,.15);padding:4px 10px;border-radius:6px;font-size:11px;">📝 Word (.docx)</span>
+              <span style="background:rgba(255,255,255,.15);padding:4px 10px;border-radius:6px;font-size:11px;">📊 Excel (.xlsx)</span>
+              <span style="background:rgba(255,255,255,.15);padding:4px 10px;border-radius:6px;font-size:11px;">🖼️ Hình ảnh</span>
+              <span style="background:rgba(255,255,255,.15);padding:4px 10px;border-radius:6px;font-size:11px;">⚖️ Max 10MB</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SLIDE 8 — QUẢN LÝ ĐƠN VỊ                       -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="slide s-white">
+    <div class="slide-header">
+      <span class="icon">🏢</span>
+      <h2>Quản lý Đơn vị (Phòng ban)</h2>
+    </div>
+    <div class="slide-body">
+      <div class="grid-2" style="flex:1;gap:20px;">
+
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="card" style="border-left:4px solid #0f2244;">
+            <div class="card-title">Chức năng quản lý (Admin)</div>
+            <ul class="feat-list" style="gap:8px;margin-top:6px;">
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">➕</span>
+                <div><strong>Thêm đơn vị mới</strong><span>Mã đơn vị (CSGT, PCCC...) + tên + mô tả</span></div>
+              </li>
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">✏️</span>
+                <div><strong>Chỉnh sửa thông tin</strong><span>Cập nhật tên, mô tả đơn vị</span></div>
+              </li>
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">🔄</span>
+                <div><strong>Kích hoạt / Vô hiệu hóa</strong><span>Toggle trạng thái hoạt động</span></div>
+              </li>
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">🔍</span>
+                <div><strong>Tìm kiếm</strong><span>Lọc theo mã, tên hoặc mô tả đơn vị</span></div>
+              </li>
+            </ul>
+          </div>
+
+          <div class="card" style="background:linear-gradient(135deg,#0f2244,#1a3a6e);color:#fff;border:none;">
+            <div style="color:var(--gold);font-weight:600;margin-bottom:8px;">16 phòng ban trong hệ thống</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;font-size:11px;color:rgba(255,255,255,.7);">
+              <span>• P.CS Hình sự (CAO)</span>
+              <span>• P.CS ATXH (CATQ)</span>
+              <span>• P.CS Giao thông (CSGT)</span>
+              <span>• P.CS Cơ động (CACD)</span>
+              <span>• P.Hồ sơ – Kế toán (HSKT)</span>
+              <span>• P.PCCC (PCCC)</span>
+              <span>• P.Quản lý Thị trường (QLTT)</span>
+              <span>• P.Bảo vệ Lâm nghiệp (BLNN)</span>
+              <span>• P.CS Nước Hình sự (CNHC)</span>
+              <span>• P.TC&amp;ĐT Ma tuý (TCDH)</span>
+              <span>• P.An toàn Kinh tế (ATKT)</span>
+              <span>• P.SC Trị an (SCTP)</span>
+              <span>• P.CV&amp;Kiểm soát kho (CVKT)</span>
+              <span>• P.Thông tấn TT (TTTH)</span>
+              <span>• P.Đào tạo Ngoại hành (DANH)</span>
+              <span style="color:rgba(255,255,255,.4);">+ Mở rộng thêm...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mock table -->
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div style="padding:10px 16px;display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--border);">
+            <div style="background:#f3f4f6;border-radius:6px;padding:5px 10px;font-size:11px;color:var(--gray);flex:1;">🔍 Tìm theo mã, tên, mô tả...</div>
+            <div style="background:#0f2244;color:#fff;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;">+ Thêm đơn vị</div>
+          </div>
+          <table class="mock-table">
+            <thead>
+              <tr>
+                <th>Mã đơn vị</th>
+                <th>Tên đơn vị</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code style="font-size:11px;background:#f3f4f6;padding:2px 6px;border-radius:4px;">CSGT</code></td>
+                <td style="font-weight:600;">P.Cảnh sát Giao thông</td>
+                <td><span style="background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;">Hoạt động</span></td>
+                <td style="display:flex;gap:4px;">
+                  <span style="background:#eff6ff;color:#1d4ed8;padding:3px 8px;border-radius:4px;font-size:10px;">✏️</span>
+                  <span style="background:#f0fdf4;color:#16a34a;padding:3px 8px;border-radius:4px;font-size:10px;">🔄</span>
+                </td>
+              </tr>
+              <tr>
+                <td><code style="font-size:11px;background:#f3f4f6;padding:2px 6px;border-radius:4px;">PCCC</code></td>
+                <td style="font-weight:600;">P.Phòng chống &amp; Cứu nạn</td>
+                <td><span style="background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;">Hoạt động</span></td>
+                <td style="display:flex;gap:4px;">
+                  <span style="background:#eff6ff;color:#1d4ed8;padding:3px 8px;border-radius:4px;font-size:10px;">✏️</span>
+                  <span style="background:#f0fdf4;color:#16a34a;padding:3px 8px;border-radius:4px;font-size:10px;">🔄</span>
+                </td>
+              </tr>
+              <tr>
+                <td><code style="font-size:11px;background:#f3f4f6;padding:2px 6px;border-radius:4px;">ATKT</code></td>
+                <td style="font-weight:600;">P.An toàn Kinh tế</td>
+                <td><span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;">Vô hiệu</span></td>
+                <td style="display:flex;gap:4px;">
+                  <span style="background:#eff6ff;color:#1d4ed8;padding:3px 8px;border-radius:4px;font-size:10px;">✏️</span>
+                  <span style="background:#f3f4f6;color:#6b7280;padding:3px 8px;border-radius:4px;font-size:10px;">🔄</span>
+                </td>
+              </tr>
+              <tr>
+                <td><code style="font-size:11px;background:#f3f4f6;padding:2px 6px;border-radius:4px;">CAO</code></td>
+                <td style="font-weight:600;">P.Cảnh sát Hình sự</td>
+                <td><span style="background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;">Hoạt động</span></td>
+                <td style="display:flex;gap:4px;">
+                  <span style="background:#eff6ff;color:#1d4ed8;padding:3px 8px;border-radius:4px;font-size:10px;">✏️</span>
+                  <span style="background:#f0fdf4;color:#16a34a;padding:3px 8px;border-radius:4px;font-size:10px;">🔄</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SLIDE 9 — QUẢN LÝ TÀI KHOẢN                    -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="slide s-white">
+    <div class="slide-header">
+      <span class="icon">👥</span>
+      <h2>Quản lý Tài khoản Người dùng</h2>
+    </div>
+    <div class="slide-body">
+      <div class="grid-2" style="flex:1;gap:20px;">
+
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="card" style="border-left:4px solid #7c3aed;">
+            <div class="card-title">Chức năng quản trị (Admin)</div>
+            <ul class="feat-list" style="gap:8px;margin-top:6px;">
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">➕</span>
+                <div><strong>Tạo tài khoản mới</strong><span>Tên đăng nhập, mật khẩu, họ tên, phân quyền, đơn vị</span></div>
+              </li>
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">✏️</span>
+                <div><strong>Chỉnh sửa thông tin</strong><span>Họ tên, phân quyền, gán vào đơn vị khác</span></div>
+              </li>
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">🔑</span>
+                <div><strong>Đặt lại mật khẩu</strong><span>Admin đặt lại mật khẩu mới cho tài khoản bất kỳ</span></div>
+              </li>
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">🔄</span>
+                <div><strong>Kích hoạt / Vô hiệu hóa</strong><span>Khóa hoặc mở khóa tài khoản</span></div>
+              </li>
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">🔍</span>
+                <div><strong>Tìm kiếm</strong><span>Lọc theo tên, tên đăng nhập, đơn vị</span></div>
+              </li>
+            </ul>
+          </div>
+
+          <div class="card" style="background:#1e3a5f;color:#fff;border:none;">
+            <div style="color:var(--gold);font-weight:600;margin-bottom:8px;">Cấu trúc tài khoản demo</div>
+            <div style="display:flex;flex-direction:column;gap:5px;font-size:11px;color:rgba(255,255,255,.75);">
+              <div style="display:flex;justify-content:space-between;padding:5px 8px;background:rgba(255,255,255,.08);border-radius:5px;">
+                <span>👑 admin</span><span style="color:var(--gold);">Quản trị hệ thống</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:5px 8px;background:rgba(255,255,255,.08);border-radius:5px;">
+                <span>🎖️ truong_csgt</span><span>Trưởng P.CS Giao thông</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:5px 8px;background:rgba(255,255,255,.08);border-radius:5px;">
+                <span>🎖️ truong_cao</span><span>Trưởng P.CS Hình sự</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:5px 8px;background:rgba(255,255,255,.08);border-radius:5px;">
+                <span>👤 csgt1, csgt2</span><span>Cán bộ P.CS Giao thông</span>
+              </div>
+              <div style="text-align:center;padding-top:4px;color:rgba(255,255,255,.4);font-size:10px;">... 30+ tài khoản tổng cộng</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mock user table -->
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div style="padding:10px 16px;display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--border);">
+            <div style="background:#f3f4f6;border-radius:6px;padding:5px 10px;font-size:11px;color:var(--gray);flex:1;">🔍 Tìm theo tên, tài khoản, đơn vị...</div>
+            <div style="background:#0f2244;color:#fff;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;">+ Thêm</div>
+          </div>
+          <table class="mock-table">
+            <thead>
+              <tr>
+                <th>Họ tên</th>
+                <th>Tên đăng nhập</th>
+                <th>Phân quyền</th>
+                <th>Đơn vị</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-weight:600;">Quản trị viên</td>
+                <td><code style="font-size:10px;background:#f3f4f6;padding:2px 5px;border-radius:3px;">admin</code></td>
+                <td><span style="background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:10px;font-size:10px;font-weight:600;">QT hệ thống</span></td>
+                <td style="font-size:11px;">P.Hồ sơ-KT</td>
+                <td><span style="background:#dcfce7;color:#16a34a;padding:2px 6px;border-radius:10px;font-size:10px;">Hoạt động</span></td>
+                <td style="display:flex;gap:3px;">
+                  <span style="background:#eff6ff;color:#1d4ed8;padding:3px 6px;border-radius:4px;font-size:10px;">✏️</span>
+                  <span style="background:#fffbeb;color:#d97706;padding:3px 6px;border-radius:4px;font-size:10px;">🔑</span>
+                  <span style="background:#f0fdf4;color:#16a34a;padding:3px 6px;border-radius:4px;font-size:10px;">🔄</span>
+                </td>
+              </tr>
+              <tr>
+                <td style="font-weight:600;">Bùi Văn Giang</td>
+                <td><code style="font-size:10px;background:#f3f4f6;padding:2px 5px;border-radius:3px;">truong_csgt</code></td>
+                <td><span style="background:#eff6ff;color:#1d4ed8;padding:2px 6px;border-radius:10px;font-size:10px;font-weight:600;">P.Trách ĐV</span></td>
+                <td style="font-size:11px;">P.CS Giao thông</td>
+                <td><span style="background:#dcfce7;color:#16a34a;padding:2px 6px;border-radius:10px;font-size:10px;">Hoạt động</span></td>
+                <td style="display:flex;gap:3px;">
+                  <span style="background:#eff6ff;color:#1d4ed8;padding:3px 6px;border-radius:4px;font-size:10px;">✏️</span>
+                  <span style="background:#fffbeb;color:#d97706;padding:3px 6px;border-radius:4px;font-size:10px;">🔑</span>
+                  <span style="background:#f0fdf4;color:#16a34a;padding:3px 6px;border-radius:4px;font-size:10px;">🔄</span>
+                </td>
+              </tr>
+              <tr>
+                <td style="font-weight:600;">Hoàng Thị Hoa</td>
+                <td><code style="font-size:10px;background:#f3f4f6;padding:2px 5px;border-radius:3px;">csgt1</code></td>
+                <td><span style="background:#f3f4f6;color:#6b7280;padding:2px 6px;border-radius:10px;font-size:10px;font-weight:600;">Cán bộ ĐV</span></td>
+                <td style="font-size:11px;">P.CS Giao thông</td>
+                <td><span style="background:#dcfce7;color:#16a34a;padding:2px 6px;border-radius:10px;font-size:10px;">Hoạt động</span></td>
+                <td style="display:flex;gap:3px;">
+                  <span style="background:#eff6ff;color:#1d4ed8;padding:3px 6px;border-radius:4px;font-size:10px;">✏️</span>
+                  <span style="background:#fffbeb;color:#d97706;padding:3px 6px;border-radius:4px;font-size:10px;">🔑</span>
+                  <span style="background:#f0fdf4;color:#16a34a;padding:3px 6px;border-radius:4px;font-size:10px;">🔄</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SLIDE 10 — BÁO CÁO THỐNG KÊ                    -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="slide s-white">
+    <div class="slide-header">
+      <span class="icon">📊</span>
+      <h2>Báo cáo &amp; Thống kê</h2>
+      <span class="badge">Admin only</span>
+    </div>
+    <div class="slide-body">
+      <div class="grid-2" style="flex:1;gap:20px;">
+
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="card" style="border-left:4px solid #16a34a;">
+            <div class="card-title">Nội dung báo cáo</div>
+            <ul class="feat-list" style="gap:8px;margin-top:6px;">
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">📈</span>
+                <div><strong>Thống kê theo trạng thái</strong><span>Tổng cộng / Chưa TH / Đang TH / Hoàn thành / Quá hạn</span></div>
+              </li>
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">🏢</span>
+                <div><strong>Thống kê theo đơn vị</strong><span>Số lượng nhiệm vụ từng trạng thái của mỗi phòng ban</span></div>
+              </li>
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">⚠️</span>
+                <div><strong>Danh sách nhiệm vụ quá hạn</strong><span>Đơn vị, thời hạn, trạng thái cụ thể</span></div>
+              </li>
+              <li style="border:none;padding:6px 0;background:none;">
+                <span class="ico">📅</span>
+                <div><strong>Lọc theo khoảng thời gian</strong><span>Từ ngày – đến ngày tuỳ chọn</span></div>
+              </li>
+            </ul>
+          </div>
+
+          <div class="card" style="background:#16a34a;color:#fff;border:none;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:32px;">📥</span>
+              <div>
+                <div style="font-size:14px;font-weight:700;">Xuất Excel 1 click</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.75);margin-top:3px;">File .xlsx gồm 3 sheet: Tổng hợp · Theo đơn vị · Quá hạn</div>
+                <div style="font-size:10px;color:rgba(255,255,255,.55);margin-top:2px;">Tên file: BaoCaoNhiemVu_20260506_1430.xlsx</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: stats mock -->
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <!-- Stat cards row -->
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
+            <div style="text-align:center;padding:10px;background:#eff6ff;border-radius:8px;">
+              <div style="font-size:22px;font-weight:800;color:#1d4ed8;">21</div>
+              <div style="font-size:9px;color:var(--gray);">Tổng cộng</div>
+            </div>
+            <div style="text-align:center;padding:10px;background:#f9fafb;border-radius:8px;">
+              <div style="font-size:22px;font-weight:800;color:#6b7280;">8</div>
+              <div style="font-size:9px;color:var(--gray);">Chưa TH</div>
+            </div>
+            <div style="text-align:center;padding:10px;background:#fef9c3;border-radius:8px;">
+              <div style="font-size:22px;font-weight:800;color:#d97706;">7</div>
+              <div style="font-size:9px;color:var(--gray);">Đang TH</div>
+            </div>
+            <div style="text-align:center;padding:10px;background:#f0fdf4;border-radius:8px;">
+              <div style="font-size:22px;font-weight:800;color:#16a34a;">3</div>
+              <div style="font-size:9px;color:var(--gray);">Hoàn thành</div>
+            </div>
+            <div style="text-align:center;padding:10px;background:#fef2f2;border-radius:8px;">
+              <div style="font-size:22px;font-weight:800;color:#dc2626;">3</div>
+              <div style="font-size:9px;color:var(--gray);">Quá hạn</div>
+            </div>
+          </div>
+
+          <!-- By dept mock -->
+          <div class="card" style="padding:0;overflow:hidden;flex:1;">
+            <div style="padding:8px 14px;font-size:11px;font-weight:600;border-bottom:1px solid var(--border);">Thống kê theo đơn vị</div>
+            <table class="mock-table">
+              <thead>
+                <tr><th>Đơn vị</th><th>Trạng thái</th><th style="text-align:right;">Số lượng</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="font-weight:600;font-size:11px;">P.Cảnh sát Giao thông</td>
+                  <td><span class="status in_progress">Đang thực hiện</span></td>
+                  <td style="text-align:right;font-weight:700;color:#1d4ed8;">2</td>
+                </tr>
+                <tr>
+                  <td style="font-weight:600;font-size:11px;">P.CS Hình sự</td>
+                  <td><span class="status in_progress">Đang thực hiện</span></td>
+                  <td style="text-align:right;font-weight:700;color:#1d4ed8;">2</td>
+                </tr>
+                <tr>
+                  <td style="font-weight:600;font-size:11px;">P.CS ATXH</td>
+                  <td><span class="status overdue">Quá hạn</span></td>
+                  <td style="text-align:right;font-weight:700;color:#dc2626;">1</td>
+                </tr>
+                <tr>
+                  <td style="font-weight:600;font-size:11px;">P.PCCC</td>
+                  <td><span class="status in_progress">Đang thực hiện</span></td>
+                  <td style="text-align:right;font-weight:700;color:#1d4ed8;">1</td>
+                </tr>
+                <tr>
+                  <td style="font-weight:600;font-size:11px;">P.Hồ sơ – Kế toán</td>
+                  <td><span class="status pending">Chưa thực hiện</span></td>
+                  <td style="text-align:right;font-weight:700;">1</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SLIDE 11 — THÔNG BÁO                           -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="slide s-white">
+    <div class="slide-header">
+      <span class="icon">🔔</span>
+      <h2>Hệ thống Thông báo</h2>
+    </div>
+    <div class="slide-body">
+      <div class="grid-2" style="flex:1;gap:20px;">
+
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="card" style="border-left:4px solid #d97706;">
+            <div class="card-title">Các loại thông báo</div>
+            <ul class="feat-list" style="gap:8px;margin-top:6px;">
+              <li style="border:none;padding:8px;background:#fffbeb;border-radius:8px;border:1px solid #fde68a;">
+                <span class="ico">📌</span>
+                <div><strong>Nhiệm vụ mới được giao</strong><span>Thông báo khi Admin giao nhiệm vụ cho đơn vị</span></div>
+              </li>
+              <li style="border:none;padding:8px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe;">
+                <span class="ico">⏰</span>
+                <div><strong>Nhắc nhở sắp đến hạn</strong><span>Cảnh báo trước N ngày (cấu hình khi tạo nhiệm vụ)</span></div>
+              </li>
+              <li style="border:none;padding:8px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca;">
+                <span class="ico">🚨</span>
+                <div><strong>Nhiệm vụ quá hạn</strong><span>Cảnh báo ngay khi deadline qua mà chưa hoàn thành</span></div>
+              </li>
+              <li style="border:none;padding:8px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">
+                <span class="ico">✅</span>
+                <div><strong>Kết quả được cập nhật</strong><span>Thông báo khi đơn vị gửi báo cáo thực hiện</span></div>
+              </li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Tính năng thông báo</div>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;font-size:12px;">
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span style="width:20px;text-align:center;">🔢</span>
+                <span>Badge đếm số thông báo chưa đọc trên menu</span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span style="width:20px;text-align:center;">👁️</span>
+                <span>Đánh dấu đã đọc từng thông báo</span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span style="width:20px;text-align:center;">✔️</span>
+                <span>Đánh dấu tất cả là đã đọc</span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span style="width:20px;text-align:center;">🎯</span>
+                <span>Thông báo theo đơn vị / cá nhân</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: notification mock UI -->
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);">
+            <div style="font-size:13px;font-weight:700;color:var(--navy);">🔔 Thông báo <span style="background:#dc2626;color:#fff;padding:1px 7px;border-radius:10px;font-size:10px;margin-left:4px;">3</span></div>
+            <div style="font-size:11px;color:#1d4ed8;cursor:pointer;">Đọc tất cả</div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:#fffbeb;display:flex;gap:10px;align-items:flex-start;">
+              <span style="font-size:20px;flex-shrink:0;">⏰</span>
+              <div style="flex:1;">
+                <div style="font-size:12px;font-weight:600;color:var(--navy);">Nhiệm vụ sắp đến hạn</div>
+                <div style="font-size:11px;color:var(--gray);margin-top:2px;">"Báo cáo tài chính quyết toán Q.I" — còn 2 ngày</div>
+                <div style="font-size:10px;color:var(--gray);margin-top:4px;">2 phút trước</div>
+              </div>
+              <span style="width:8px;height:8px;background:#d97706;border-radius:50%;flex-shrink:0;margin-top:4px;"></span>
+            </div>
+
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:#fef2f2;display:flex;gap:10px;align-items:flex-start;">
+              <span style="font-size:20px;flex-shrink:0;">🚨</span>
+              <div style="flex:1;">
+                <div style="font-size:12px;font-weight:600;color:#dc2626;">Nhiệm vụ quá hạn!</div>
+                <div style="font-size:11px;color:var(--gray);margin-top:2px;">"Báo cáo tổng hợp tệ nạn Q.II" — đã quá hạn 3 ngày</div>
+                <div style="font-size:10px;color:var(--gray);margin-top:4px;">1 giờ trước</div>
+              </div>
+              <span style="width:8px;height:8px;background:#dc2626;border-radius:50%;flex-shrink:0;margin-top:4px;"></span>
+            </div>
+
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:#fffbeb;display:flex;gap:10px;align-items:flex-start;">
+              <span style="font-size:20px;flex-shrink:0;">📌</span>
+              <div style="flex:1;">
+                <div style="font-size:12px;font-weight:600;color:var(--navy);">Nhiệm vụ mới được giao</div>
+                <div style="font-size:11px;color:var(--gray);margin-top:2px;">"Điều tra đường dây ma tuý liên tỉnh" — P.TC&amp;ĐT Ma tuý</div>
+                <div style="font-size:10px;color:var(--gray);margin-top:4px;">3 giờ trước</div>
+              </div>
+              <span style="width:8px;height:8px;background:#d97706;border-radius:50%;flex-shrink:0;margin-top:4px;"></span>
+            </div>
+
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start;opacity:.6;">
+              <span style="font-size:20px;flex-shrink:0;">✅</span>
+              <div style="flex:1;">
+                <div style="font-size:12px;font-weight:600;color:var(--navy);">Kết quả đã được cập nhật</div>
+                <div style="font-size:11px;color:var(--gray);margin-top:2px;">"Kiểm tra kho vũ khí" — P.CV&amp;Kiểm soát kho báo cáo 100%</div>
+                <div style="font-size:10px;color:var(--gray);margin-top:4px;">Hôm qua</div>
+              </div>
+            </div>
+
+            <div style="padding:12px 16px;display:flex;gap:10px;align-items:flex-start;opacity:.6;">
+              <span style="font-size:20px;flex-shrink:0;">✅</span>
+              <div style="flex:1;">
+                <div style="font-size:12px;font-weight:600;color:var(--navy);">Điều tra hoàn thành</div>
+                <div style="font-size:11px;color:var(--gray);margin-top:2px;">"Vụ CGTT xã Tân Bình" — hồ sơ đã chuyển VKS</div>
+                <div style="font-size:10px;color:var(--gray);margin-top:4px;">2 ngày trước</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SLIDE 12 — TỔNG KẾT                            -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div class="slide s-close">
+    <div class="shield" style="font-size:64px;">🛡️</div>
+    <h2>Tổng kết Hệ thống CAHY</h2>
+    <p>Giải pháp quản lý nhiệm vụ nội bộ cho Công an tỉnh — đơn giản, bảo mật, hiệu quả</p>
+
+    <div class="summary-grid">
+      <div class="sum-item">
+        <div class="sum-num">6</div>
+        <div class="sum-lbl">Module chức năng</div>
+      </div>
+      <div class="sum-item">
+        <div class="sum-num">16</div>
+        <div class="sum-lbl">Phòng ban quản lý</div>
+      </div>
+      <div class="sum-item">
+        <div class="sum-num">3</div>
+        <div class="sum-lbl">Cấp phân quyền</div>
+      </div>
+      <div class="sum-item">
+        <div class="sum-num">100%</div>
+        <div class="sum-lbl">Nội bộ LAN</div>
+      </div>
+      <div class="sum-item">
+        <div class="sum-num">xlsx</div>
+        <div class="sum-lbl">Xuất báo cáo Excel</div>
+      </div>
+      <div class="sum-item">
+        <div class="sum-num">∞</div>
+        <div class="sum-lbl">File đính kèm</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:600px;margin-top:8px;">
+      <span style="background:rgba(200,164,58,.15);color:var(--gold);border:1px solid rgba(200,164,58,.3);padding:6px 16px;border-radius:20px;font-size:12px;">✅ Đăng nhập phân quyền</span>
+      <span style="background:rgba(200,164,58,.15);color:var(--gold);border:1px solid rgba(200,164,58,.3);padding:6px 16px;border-radius:20px;font-size:12px;">✅ Giao &amp; theo dõi nhiệm vụ</span>
+      <span style="background:rgba(200,164,58,.15);color:var(--gold);border:1px solid rgba(200,164,58,.3);padding:6px 16px;border-radius:20px;font-size:12px;">✅ Báo cáo tiến độ</span>
+      <span style="background:rgba(200,164,58,.15);color:var(--gold);border:1px solid rgba(200,164,58,.3);padding:6px 16px;border-radius:20px;font-size:12px;">✅ Giải trình quá hạn</span>
+      <span style="background:rgba(200,164,58,.15);color:var(--gold);border:1px solid rgba(200,164,58,.3);padding:6px 16px;border-radius:20px;font-size:12px;">✅ Thống kê &amp; Xuất Excel</span>
+      <span style="background:rgba(200,164,58,.15);color:var(--gold);border:1px solid rgba(200,164,58,.3);padding:6px 16px;border-radius:20px;font-size:12px;">✅ Thông báo tự động</span>
+      <span style="background:rgba(200,164,58,.15);color:var(--gold);border:1px solid rgba(200,164,58,.3);padding:6px 16px;border-radius:20px;font-size:12px;">✅ Đính kèm tài liệu</span>
+      <span style="background:rgba(200,164,58,.15);color:var(--gold);border:1px solid rgba(200,164,58,.3);padding:6px 16px;border-radius:20px;font-size:12px;">✅ Lọc dữ liệu theo phòng ban</span>
+    </div>
+
+    <div style="color:rgba(255,255,255,.35);font-size:11px;margin-top:8px;">
+      Ekila · 2026 · Hệ thống vận hành trên mạng LAN nội bộ Công an tỉnh
+    </div>
+  </div>
+
+</div><!-- /#deck -->
+
+<!-- ── Nav controls ── -->
+<div id="nav">
+  <button id="prev" onclick="go(-1)">‹</button>
+  <span id="counter">1 / 12</span>
+  <button id="next" onclick="go(1)">›</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide')
+  let cur = 0
+
+  function show(i) {
+    slides[cur].classList.remove('active')
+    cur = (i + slides.length) % slides.length
+    slides[cur].classList.add('active')
+    document.getElementById('counter').textContent = `${cur + 1} / ${slides.length}`
+  }
+
+  function go(dir) { show(cur + dir) }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(1) }
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')                    { e.preventDefault(); go(-1) }
+  })
+</script>
+</body>
+</html>
