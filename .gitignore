@@ -5,3 +5,5 @@ dist
 .DS_Store
 coverage
 .claude/
+backend/uploads/*
+!backend/uploads/.gitkeep
