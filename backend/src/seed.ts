@@ -23,16 +23,7 @@ async function seed() {
     username: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || 'postgres',
     database: process.env.DB_NAME || 'cahy_db',
-    entities: [
-      User,
-      Department,
-      Task,
-      TaskResult,
-      TaskHistory,
-      TaskResultHistory,
-      Notification,
-      LoginLog,
-    ],
+    entities: [User, Department, Task, TaskResult, TaskHistory, TaskResultHistory, Notification, LoginLog],
     synchronize: true,
   });
 
@@ -43,393 +34,143 @@ async function seed() {
   const taskRepository = dataSource.getRepository(Task);
   const taskResultRepository = dataSource.getRepository(TaskResult);
   const taskHistoryRepository = dataSource.getRepository(TaskHistory);
-  const taskResultHistoryRepository =
-    dataSource.getRepository(TaskResultHistory);
+  const taskResultHistoryRepository = dataSource.getRepository(TaskResultHistory);
   const notificationRepository = dataSource.getRepository(Notification);
   const loginLogRepository = dataSource.getRepository(LoginLog);
 
   console.log('🌱 Starting seed data...\n');
 
-  // Clear old task data
-  console.log('🗑️  Clearing old task data...');
-  await dataSource.query('DELETE FROM task_result_histories');
-  await dataSource.query('DELETE FROM task_histories');
+  // Clear all data (đúng thứ tự FK)
+  console.log('🗑️  Clearing all data...');
   await dataSource.query('DELETE FROM notifications');
   await dataSource.query('DELETE FROM login_logs');
+  await dataSource.query('DELETE FROM task_result_histories');
+  await dataSource.query('DELETE FROM task_histories');
   await dataSource.query('DELETE FROM task_results');
   await dataSource.query('DELETE FROM task_cooperating_departments');
   await dataSource.query('DELETE FROM tasks');
+  await dataSource.query('DELETE FROM users');
+  await dataSource.query('DELETE FROM departments');
   console.log('  ✓ Cleared\n');
 
-  // Create departments
+  // ───────────────────────────────────────────
+  // DEPARTMENTS — theo cơ cấu Công an cấp tỉnh
+  // ───────────────────────────────────────────
   console.log('📁 Creating departments...');
   const deptData = [
-    {
-      code: 'CAO',
-      name: 'Phòng Cảnh sát Hình sự',
-      description: 'Phòng chuyên trách các vụ án hình sự, điều tra tội phạm',
-    },
-    {
-      code: 'CATQ',
-      name: 'Phòng Cảnh sát An toàn xã hội',
-      description: 'Phòng đảm bảo trật tự an toàn cộng đồng, xử lý tệ nạn',
-    },
-    {
-      code: 'CSGT',
-      name: 'Phòng Cảnh sát Giao thông',
-      description:
-        'Phòng quản lý giao thông đường bộ, kiểm soát trật tự giao thông',
-    },
-    {
-      code: 'CACD',
-      name: 'Phòng Cảnh sát Cơ động',
-      description: 'Phòng xử lý các sự cố cấp bách, bảo vệ an toàn lễ hội',
-    },
-    {
-      code: 'HSKT',
-      name: 'Phòng Hồ sơ - Kế toán',
-      description: 'Phòng quản lý hành chính, tài chính, lưu trữ',
-    },
-    {
-      code: 'PCCC',
-      name: 'Phòng Phòng chống và Cứu nạn Cứu hộ',
-      description: 'Phòng chuyên trách phòng cháy chữa cháy, cứu nạn cứu hộ',
-    },
-    {
-      code: 'QLTT',
-      name: 'Phòng Quản lý Thị trường',
-      description: 'Phòng quản lý thị trường, chống buôn lậu',
-    },
-    {
-      code: 'BLNN',
-      name: 'Phòng Bảo vệ Lâm nghiệp và Tài nguyên',
-      description: 'Phòng quản lý bảo vệ rừng, tài nguyên thiên nhiên',
-    },
-    {
-      code: 'CNHC',
-      name: 'Phòng Cảnh sát Nước Hình sự',
-      description: 'Phòng quản lý vùng nước, điều tra tội phạm trên biển',
-    },
-    {
-      code: 'TCDH',
-      name: 'Phòng Tác chiến và Điều tra tội phạm Ma tuý',
-      description: 'Phòng chuyên trách điều tra tội phạm ma tuý, pháo',
-    },
-    {
-      code: 'ATKT',
-      name: 'Phòng An toàn Kinh tế',
-      description: 'Phòng điều tra tội phạm kinh tế, gian lận thương mại',
-    },
-    {
-      code: 'SCTP',
-      name: 'Phòng Sinh cảnh Trị an Phòng chống tội phạm',
-      description: 'Phòng chủ trì công tác phòng ngừa tội phạm sinh cảnh',
-    },
-    {
-      code: 'CVKT',
-      name: 'Phòng Cảnh vệ và Kiểm soát thủ kho',
-      description: 'Phòng bảo vệ các kho tàng, công sở chính phủ',
-    },
-    {
-      code: 'TTTH',
-      name: 'Phòng Thông tấn Thông tin',
-      description: 'Phòng quản lý thông tin, truyền thông nội bộ',
-    },
-    {
-      code: 'DANH',
-      name: 'Phòng Đào tạo và Ngoại hành',
-      description: 'Phòng đào tạo cán bộ, tuyên truyền giáo dục',
-    },
+    // Khối Xây dựng lực lượng
+    { code: 'PV01', name: 'Phòng Tham mưu', description: 'Tham mưu, tổng hợp, điều phối chung công tác Công an tỉnh' },
+    { code: 'PV06', name: 'Phòng Hồ sơ nghiệp vụ', description: 'Quản lý hồ sơ nghiệp vụ, lưu trữ tài liệu bí mật' },
+    { code: 'PX01', name: 'Phòng Tổ chức - Cán bộ', description: 'Quản lý tổ chức bộ máy, nhân sự, công tác cán bộ' },
+    { code: 'PX03', name: 'Phòng Công tác chính trị', description: 'Công tác Đảng, giáo dục chính trị tư tưởng, văn hoá' },
+    { code: 'PX05', name: 'Thanh tra Công an tỉnh', description: 'Thanh tra, kiểm tra, giải quyết khiếu nại tố cáo' },
+    { code: 'PX06', name: 'Uỷ ban Kiểm tra Đảng uỷ', description: 'Kiểm tra kỷ luật Đảng, giám sát đảng viên trong lực lượng' },
+    { code: 'PH10', name: 'Phòng Hậu cần', description: 'Quản lý cơ sở vật chất, trang thiết bị, hậu cần kỹ thuật' },
+    // Khối An ninh
+    { code: 'PA01', name: 'Phòng An ninh đối ngoại', description: 'Bảo vệ an ninh lĩnh vực đối ngoại, quản lý người nước ngoài' },
+    { code: 'PA02', name: 'Phòng An ninh nội địa', description: 'Bảo vệ an ninh nội địa, phòng chống tổ chức phản động' },
+    { code: 'PA03', name: 'Phòng An ninh chính trị nội bộ', description: 'Bảo vệ an ninh nội bộ cơ quan, tổ chức nhà nước' },
+    { code: 'PA04', name: 'Phòng An ninh kinh tế', description: 'Bảo vệ an ninh kinh tế, phòng chống tội phạm kinh tế trọng điểm' },
+    { code: 'PA05', name: 'Phòng An ninh mạng và phòng chống tội phạm công nghệ cao', description: 'An ninh mạng, phòng chống tội phạm sử dụng công nghệ cao' },
+    { code: 'PA06', name: 'Phòng Kỹ thuật nghiệp vụ và ngoại tuyến', description: 'Kỹ thuật nghiệp vụ trinh sát, hoạt động ngoại tuyến' },
+    { code: 'PA08', name: 'Phòng Quản lý xuất nhập cảnh', description: 'Cấp và quản lý hộ chiếu, visa, giấy tờ xuất nhập cảnh' },
+    { code: 'PA09', name: 'Phòng An ninh điều tra', description: 'Điều tra các vụ án xâm phạm an ninh quốc gia' },
+    // Khối Cảnh sát
+    { code: 'PC01', name: 'Văn phòng Cơ quan CSĐT', description: 'Hành chính, văn phòng hỗ trợ cơ quan cảnh sát điều tra' },
+    { code: 'PC02', name: 'Phòng Cảnh sát hình sự', description: 'Điều tra tội phạm hình sự: giết người, cướp, trộm, lừa đảo' },
+    { code: 'PC03', name: 'Phòng Cảnh sát kinh tế và môi trường', description: 'Điều tra tội phạm kinh tế, tham nhũng, buôn lậu, môi trường' },
+    { code: 'PC04', name: 'Phòng Cảnh sát điều tra tội phạm về ma túy', description: 'Phòng chống, điều tra, xử lý tội phạm về ma túy' },
+    { code: 'PC06', name: 'Phòng Cảnh sát QLHC về TTXH', description: 'Quản lý hộ khẩu, vũ khí, vật liệu nổ, ngành nghề có điều kiện' },
+    { code: 'PC07', name: 'Phòng Cảnh sát PCCC và CNCH', description: 'Phòng cháy chữa cháy, cứu nạn cứu hộ' },
+    { code: 'PC08', name: 'Phòng Cảnh sát giao thông', description: 'Tuần tra kiểm soát, đảm bảo trật tự an toàn giao thông đường bộ' },
+    { code: 'PC09', name: 'Phòng Kỹ thuật hình sự', description: 'Giám định kỹ thuật, phân tích hiện trường và dấu vết tội phạm' },
+    { code: 'PC10', name: 'Phòng Cảnh sát thi hành án hình sự và HTTF', description: 'Thi hành án hình sự, hỗ trợ tư pháp' },
+    { code: 'PK02', name: 'Phòng Cảnh sát cơ động', description: 'Xử lý tình huống khẩn cấp, bảo vệ sự kiện chính trị lớn' },
+    { code: 'PH01', name: 'Phòng Tài chính', description: 'Quản lý ngân sách, tài chính, kế toán toàn đơn vị' },
+    { code: 'PH06', name: 'Bệnh viện Công an tỉnh', description: 'Khám chữa bệnh, chăm sóc sức khoẻ cán bộ chiến sĩ' },
+    { code: 'PC11', name: 'Trại tạm giam', description: 'Quản lý tạm giam, tạm giữ đối tượng vi phạm pháp luật' },
   ];
 
-  for (const dept of deptData) {
-    const exists = await deptRepository.findOne({ where: { code: dept.code } });
-    if (!exists) {
-      await deptRepository.save({
-        ...dept,
-        isActive: true,
-      });
-      console.log(`  ✓ Created department: ${dept.code} - ${dept.name}`);
-    } else {
-      console.log(`  ✓ Department exists: ${dept.code}`);
-    }
+  for (const d of deptData) {
+    await deptRepository.save({ ...d, isActive: true });
+    console.log(`  ✓ ${d.code} - ${d.name}`);
   }
 
   const allDepartments = await deptRepository.find();
+  const byCode = (code: string) => allDepartments.find((d) => d.code === code);
 
-  // Helper: lookup department by code
-  const byCode = (code: string) =>
-    allDepartments.find((dep) => dep.code === code);
-
-  // Create users
+  // ───────────────────────────────────────────
+  // USERS
+  // ───────────────────────────────────────────
   console.log('\n👤 Creating users...');
   const hashedPassword = await bcrypt.hash('123456', 10);
 
   const usersData = [
-    // Admin — thuộc phòng HSKT (hành chính quản trị)
-    {
-      username: 'admin',
-      fullName: 'Nguyễn Văn Admin',
-      role: Role.ADMIN,
-      deptCode: 'HSKT',
-    },
-    // CAO - Cảnh sát Hình sự
-    {
-      username: 'truong_cao',
-      fullName: 'Trương Văn An',
-      role: Role.UNIT_LEAD,
-      deptCode: 'CAO',
-    },
-    {
-      username: 'cshs1',
-      fullName: 'Lê Thị Bích',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'CAO',
-    },
-    {
-      username: 'cshs2',
-      fullName: 'Phạm Văn Cường',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'CAO',
-    },
-    // CATQ - Cảnh sát An toàn xã hội
-    {
-      username: 'truong_catq',
-      fullName: 'Đặng Thị Dung',
-      role: Role.UNIT_LEAD,
-      deptCode: 'CATQ',
-    },
-    {
-      username: 'csatxh1',
-      fullName: 'Vũ Văn Em',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'CATQ',
-    },
-    {
-      username: 'csatxh2',
-      fullName: 'Ngô Thị Phương',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'CATQ',
-    },
-    // CSGT - Cảnh sát Giao thông
-    {
-      username: 'truong_csgt',
-      fullName: 'Bùi Văn Giang',
-      role: Role.UNIT_LEAD,
-      deptCode: 'CSGT',
-    },
-    {
-      username: 'csgt1',
-      fullName: 'Hoàng Thị Hoa',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'CSGT',
-    },
-    {
-      username: 'csgt2',
-      fullName: 'Phan Văn Hùng',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'CSGT',
-    },
-    // CACD - Cảnh sát Cơ động
-    {
-      username: 'truong_cacd',
-      fullName: 'Đinh Văn Khoa',
-      role: Role.UNIT_LEAD,
-      deptCode: 'CACD',
-    },
-    {
-      username: 'cacd1',
-      fullName: 'Trần Thị Lan',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'CACD',
-    },
-    {
-      username: 'cacd2',
-      fullName: 'Hồ Văn Long',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'CACD',
-    },
-    // HSKT - Hồ sơ Kế toán
-    {
-      username: 'truong_hskt',
-      fullName: 'Lý Thị Mai',
-      role: Role.UNIT_LEAD,
-      deptCode: 'HSKT',
-    },
-    {
-      username: 'hskt1',
-      fullName: 'Nguyễn Văn Nam',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'HSKT',
-    },
-    // PCCC - Phòng cháy chữa cháy
-    {
-      username: 'truong_pccc',
-      fullName: 'Võ Văn Minh',
-      role: Role.UNIT_LEAD,
-      deptCode: 'PCCC',
-    },
-    {
-      username: 'pccc1',
-      fullName: 'Dương Thị Ngân',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'PCCC',
-    },
-    // QLTT - Quản lý Thị trường
-    {
-      username: 'truong_qltt',
-      fullName: 'Lâm Văn Oanh',
-      role: Role.UNIT_LEAD,
-      deptCode: 'QLTT',
-    },
-    {
-      username: 'qltt1',
-      fullName: 'Giang Thị Phúc',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'QLTT',
-    },
-    // BLNN - Bảo vệ Lâm nghiệp
-    {
-      username: 'truong_blnn',
-      fullName: 'Quốc Văn Quang',
-      role: Role.UNIT_LEAD,
-      deptCode: 'BLNN',
-    },
-    {
-      username: 'blnn1',
-      fullName: 'Huỳnh Thị Ry',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'BLNN',
-    },
-    // CNHC - Cảnh sát Nước Hình sự
-    {
-      username: 'truong_cnhc',
-      fullName: 'Sơn Văn Sáng',
-      role: Role.UNIT_LEAD,
-      deptCode: 'CNHC',
-    },
-    {
-      username: 'cnhc1',
-      fullName: 'Mai Thị Thu',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'CNHC',
-    },
-    // TCDH - Điều tra Ma tuý
-    {
-      username: 'truong_tcdh',
-      fullName: 'Thái Văn Uy',
-      role: Role.UNIT_LEAD,
-      deptCode: 'TCDH',
-    },
-    {
-      username: 'tcdh1',
-      fullName: 'Xuân Thị Vân',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'TCDH',
-    },
-    // ATKT - An toàn Kinh tế
-    {
-      username: 'truong_atkt',
-      fullName: 'Tùng Văn Wân',
-      role: Role.UNIT_LEAD,
-      deptCode: 'ATKT',
-    },
-    {
-      username: 'atkt1',
-      fullName: 'Yên Thị Xuân',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'ATKT',
-    },
-    // SCTP - Sinh cảnh Trị an
-    {
-      username: 'truong_sctp',
-      fullName: 'Úc Văn Yên',
-      role: Role.UNIT_LEAD,
-      deptCode: 'SCTP',
-    },
-    {
-      username: 'sctp1',
-      fullName: 'Bảo Thị Yến',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'SCTP',
-    },
-    // CVKT - Cảnh vệ
-    {
-      username: 'truong_cvkt',
-      fullName: 'Á Văn Zân',
-      role: Role.UNIT_LEAD,
-      deptCode: 'CVKT',
-    },
-    {
-      username: 'cvkt1',
-      fullName: 'Cẩm Thị Zung',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'CVKT',
-    },
-    // TTTH - Thông tấn Thông tin
-    {
-      username: 'truong_ttth',
-      fullName: 'Bình Văn Tâm',
-      role: Role.UNIT_LEAD,
-      deptCode: 'TTTH',
-    },
-    {
-      username: 'ttth1',
-      fullName: 'Diệu Thị Thảo',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'TTTH',
-    },
-    // DANH - Đào tạo
-    {
-      username: 'truong_danh',
-      fullName: 'Chương Văn Thịnh',
-      role: Role.UNIT_LEAD,
-      deptCode: 'DANH',
-    },
-    {
-      username: 'danh1',
-      fullName: 'Hiếu Thị Trang',
-      role: Role.UNIT_MEMBER,
-      deptCode: 'DANH',
-    },
+    { username: 'admin',      fullName: 'Đại tá Nguyễn Văn Hùng',    role: Role.ADMIN,       deptCode: 'PV01' },
+    // Khối XDLL
+    { username: 'tp_pv01',   fullName: 'Thượng tá Lê Đình Phong',    role: Role.UNIT_LEAD,   deptCode: 'PV01' },
+    { username: 'tp_pv06',   fullName: 'Thượng tá Trần Thị Hương',   role: Role.UNIT_LEAD,   deptCode: 'PV06' },
+    { username: 'tp_px01',   fullName: 'Thượng tá Phạm Văn Tuấn',    role: Role.UNIT_LEAD,   deptCode: 'PX01' },
+    { username: 'tp_px03',   fullName: 'Trung tá Nguyễn Thị Lan',    role: Role.UNIT_LEAD,   deptCode: 'PX03' },
+    { username: 'tp_px05',   fullName: 'Thượng tá Vũ Văn Thành',     role: Role.UNIT_LEAD,   deptCode: 'PX05' },
+    { username: 'tp_px06',   fullName: 'Trung tá Đặng Thị Nga',      role: Role.UNIT_LEAD,   deptCode: 'PX06' },
+    { username: 'tp_ph10',   fullName: 'Thượng tá Hoàng Văn Minh',   role: Role.UNIT_LEAD,   deptCode: 'PH10' },
+    // Khối An ninh
+    { username: 'tp_pa01',   fullName: 'Thượng tá Bùi Văn Dũng',     role: Role.UNIT_LEAD,   deptCode: 'PA01' },
+    { username: 'tp_pa02',   fullName: 'Thượng tá Đinh Thị Hà',      role: Role.UNIT_LEAD,   deptCode: 'PA02' },
+    { username: 'tp_pa03',   fullName: 'Thượng tá Phan Văn Tâm',     role: Role.UNIT_LEAD,   deptCode: 'PA03' },
+    { username: 'tp_pa04',   fullName: 'Thượng tá Lý Văn Khoa',      role: Role.UNIT_LEAD,   deptCode: 'PA04' },
+    { username: 'tp_pa05',   fullName: 'Trung tá Trương Văn Bình',   role: Role.UNIT_LEAD,   deptCode: 'PA05' },
+    { username: 'tp_pa06',   fullName: 'Thượng tá Dương Thị Thu',    role: Role.UNIT_LEAD,   deptCode: 'PA06' },
+    { username: 'tp_pa08',   fullName: 'Thượng tá Lưu Văn Nam',      role: Role.UNIT_LEAD,   deptCode: 'PA08' },
+    { username: 'tp_pa09',   fullName: 'Thượng tá Hồ Văn An',        role: Role.UNIT_LEAD,   deptCode: 'PA09' },
+    // Khối Cảnh sát
+    { username: 'tp_pc01',   fullName: 'Thượng tá Võ Thị Mai',       role: Role.UNIT_LEAD,   deptCode: 'PC01' },
+    { username: 'tp_pc02',   fullName: 'Thượng tá Cao Văn Long',      role: Role.UNIT_LEAD,   deptCode: 'PC02' },
+    { username: 'tp_pc03',   fullName: 'Thượng tá Tạ Văn Hiếu',      role: Role.UNIT_LEAD,   deptCode: 'PC03' },
+    { username: 'tp_pc04',   fullName: 'Thượng tá Lã Văn Quân',      role: Role.UNIT_LEAD,   deptCode: 'PC04' },
+    { username: 'tp_pc06',   fullName: 'Thượng tá Chu Thị Yến',      role: Role.UNIT_LEAD,   deptCode: 'PC06' },
+    { username: 'tp_pc07',   fullName: 'Thượng tá Mai Văn Phúc',     role: Role.UNIT_LEAD,   deptCode: 'PC07' },
+    { username: 'tp_pc08',   fullName: 'Thượng tá Đào Văn Sơn',      role: Role.UNIT_LEAD,   deptCode: 'PC08' },
+    { username: 'tp_pc09',   fullName: 'Thượng tá Kiều Thị Vân',     role: Role.UNIT_LEAD,   deptCode: 'PC09' },
+    { username: 'tp_pc10',   fullName: 'Trung tá Bạch Văn Tú',       role: Role.UNIT_LEAD,   deptCode: 'PC10' },
+    { username: 'tp_pk02',   fullName: 'Thượng tá Hà Văn Khánh',     role: Role.UNIT_LEAD,   deptCode: 'PK02' },
+    { username: 'tp_ph01',   fullName: 'Trung tá Mã Thị Liên',       role: Role.UNIT_LEAD,   deptCode: 'PH01' },
+    { username: 'tp_ph06',   fullName: 'Thượng tá Phùng Văn Hiệp',   role: Role.UNIT_LEAD,   deptCode: 'PH06' },
+    { username: 'tp_pc11',   fullName: 'Thượng tá Ngô Văn Cường',    role: Role.UNIT_LEAD,   deptCode: 'PC11' },
+    // Cán bộ các phòng trọng điểm
+    { username: 'cb_pc02_1', fullName: 'Thiếu tá Nguyễn Thị Bích',   role: Role.UNIT_MEMBER, deptCode: 'PC02' },
+    { username: 'cb_pc02_2', fullName: 'Đại úy Trần Văn Đức',        role: Role.UNIT_MEMBER, deptCode: 'PC02' },
+    { username: 'cb_pc04_1', fullName: 'Thiếu tá Lê Thị Hoa',        role: Role.UNIT_MEMBER, deptCode: 'PC04' },
+    { username: 'cb_pc04_2', fullName: 'Đại úy Phan Văn Tài',        role: Role.UNIT_MEMBER, deptCode: 'PC04' },
+    { username: 'cb_pc08_1', fullName: 'Thiếu tá Vũ Thị Linh',       role: Role.UNIT_MEMBER, deptCode: 'PC08' },
+    { username: 'cb_pc08_2', fullName: 'Đại úy Bùi Văn Thắng',       role: Role.UNIT_MEMBER, deptCode: 'PC08' },
+    { username: 'cb_pc07_1', fullName: 'Thiếu tá Đặng Văn Cảnh',     role: Role.UNIT_MEMBER, deptCode: 'PC07' },
+    { username: 'cb_pa05_1', fullName: 'Thiếu tá Hoàng Thị Diệp',    role: Role.UNIT_MEMBER, deptCode: 'PA05' },
+    { username: 'cb_px01_1', fullName: 'Thiếu tá Đinh Văn Lộc',      role: Role.UNIT_MEMBER, deptCode: 'PX01' },
+    { username: 'cb_pc03_1', fullName: 'Thiếu tá Cao Thị Thanh',     role: Role.UNIT_MEMBER, deptCode: 'PC03' },
   ];
 
   const userMap = new Map<string, User>();
-  for (const userData of usersData) {
-    const exists = await userRepository.findOne({
-      where: { username: userData.username },
+  for (const u of usersData) {
+    const user = await userRepository.save({
+      username: u.username,
+      fullName: u.fullName,
+      password: hashedPassword,
+      role: u.role,
+      departmentId: byCode(u.deptCode)?.id,
+      isActive: true,
     });
-    if (!exists) {
-      const user = await userRepository.save({
-        username: userData.username,
-        fullName: userData.fullName,
-        password: hashedPassword,
-        role: userData.role,
-        departmentId: byCode(userData.deptCode)?.id,
-        isActive: true,
-      });
-      userMap.set(userData.username, user);
-      console.log(
-        `  ✓ Created user: ${userData.username} - ${userData.fullName}`,
-      );
-    } else {
-      // Sync departmentId nếu thiếu hoặc sai
-      const deptId = byCode(userData.deptCode)?.id;
-      if (deptId && exists.departmentId !== deptId) {
-        await userRepository.update(exists.id, { departmentId: deptId });
-        exists.departmentId = deptId;
-      }
-      userMap.set(userData.username, exists);
-      console.log(
-        `  ✓ User exists: ${userData.username} [${userData.deptCode}]`,
-      );
-    }
+    userMap.set(u.username, user);
+    console.log(`  ✓ ${u.username} — ${u.fullName}`);
   }
 
   const dept = byCode;
   const adminId = userMap.get('admin')?.id;
 
-  // Create tasks
+  // ───────────────────────────────────────────
+  // TASKS
+  // ───────────────────────────────────────────
   console.log('\n📋 Creating tasks...');
 
   interface TaskSeed {
@@ -440,429 +181,349 @@ async function seed() {
     cooperatingCodes?: string[];
     status: TaskStatus;
     frequency: TaskFrequency;
-    deadlineDays: number; // relative days from now (negative = past)
+    deadlineDays: number;
     reminderBefore?: number;
     linhVuc?: string;
   }
 
   const tasksData: TaskSeed[] = [
-    // CAO - Cảnh sát Hình sự
+    // 0
     {
-      title: 'Điều tra vụ trộm cắp tài sản tại phường Hòa Phú',
-      content:
-        'Điều tra chi tiết vụ trộm tài sản tại khu dân cư, lấy lời khai nhân chứng, thu thập chứng cứ camera an ninh.',
-      expectedResult: 'Xác định và bắt giữ nghi phạm, lập hồ sơ chuyển VKS.',
-      leadCode: 'CAO',
-      cooperatingCodes: ['CATQ'],
+      title: 'Điều tra vụ trộm cắp tài sản có tổ chức tại khu công nghiệp',
+      content: 'Triển khai điều tra nhóm đối tượng chuyên trộm cắp tài sản tại khu công nghiệp, lấy lời khai nhân chứng, thu thập chứng cứ từ camera an ninh và khám nghiệm hiện trường.',
+      expectedResult: 'Xác định, bắt giữ toàn bộ đối tượng; lập hồ sơ đề nghị VKS khởi tố vụ án.',
+      leadCode: 'PC02',
+      cooperatingCodes: ['PC01', 'PC09'],
       status: TaskStatus.IN_PROGRESS,
       frequency: TaskFrequency.ONCE,
-      deadlineDays: 7,
-      reminderBefore: 2,
+      deadlineDays: 10,
+      reminderBefore: 3,
       linhVuc: 'Điều tra hình sự',
     },
+    // 1
     {
-      title: 'Điều tra vụ cố ý gây thương tích tại xã Tân Bình',
-      content:
-        'Lấy lời khai các bên liên quan, giám định thương tích, xác định nguyên nhân và động cơ vụ việc.',
-      expectedResult: 'Hoàn thành điều tra, chuyển hồ sơ khởi tố sang VKS.',
-      leadCode: 'CAO',
-      status: TaskStatus.COMPLETED,
+      title: 'Triệt phá đường dây vận chuyển ma túy liên tỉnh',
+      content: 'Trinh sát, xác minh đường dây vận chuyển ma túy từ biên giới vào tỉnh. Phối hợp các lực lượng để bắt giữ đối tượng và thu giữ tang vật.',
+      expectedResult: 'Bắt giữ ít nhất 3 đối tượng cầm đầu, thu giữ toàn bộ tang vật, lập hồ sơ khởi tố.',
+      leadCode: 'PC04',
+      cooperatingCodes: ['PC02'],
+      status: TaskStatus.IN_PROGRESS,
       frequency: TaskFrequency.ONCE,
-      deadlineDays: -5,
-      linhVuc: 'Điều tra hình sự',
+      deadlineDays: 15,
+      reminderBefore: 5,
+      linhVuc: 'Phòng chống ma túy',
     },
+    // 2
     {
-      title: 'Tập huấn kỹ năng điều tra và thu thập chứng cứ',
-      content:
-        'Đào tạo cán bộ về kỹ thuật lấy lời khai, bảo quản hiện trường, lập hồ sơ vụ án theo quy trình mới.',
-      expectedResult: 'Đào tạo ít nhất 20 cán bộ đạt yêu cầu.',
-      leadCode: 'CAO',
-      cooperatingCodes: ['DANH'],
-      status: TaskStatus.PENDING,
-      frequency: TaskFrequency.QUARTERLY,
-      deadlineDays: 30,
-      reminderBefore: 7,
-      linhVuc: 'Đào tạo - Huấn luyện',
-    },
-    // CATQ - Cảnh sát An toàn xã hội
-    {
-      title: 'Kiểm tra an ninh trật tự tại chợ trung tâm',
-      content:
-        'Tăng cường tuần tra, ngăn chặn trộm cắp, đảm bảo trật tự mua bán tại khu vực chợ trung tâm.',
-      expectedResult:
-        'Không có sự cố mất trật tự, lập biên bản xử lý vi phạm nếu có.',
-      leadCode: 'CATQ',
-      cooperatingCodes: ['CSGT'],
+      title: 'Tuần tra kiểm soát trật tự an toàn giao thông đường bộ',
+      content: 'Tổ chức tuần tra định kỳ trên các tuyến quốc lộ và tỉnh lộ trọng điểm; kiểm tra phương tiện, xử lý vi phạm hành chính về giao thông.',
+      expectedResult: 'Mỗi ca xử lý tối thiểu 15 trường hợp vi phạm; không để xảy ra tai nạn giao thông nghiêm trọng.',
+      leadCode: 'PC08',
       status: TaskStatus.PENDING,
       frequency: TaskFrequency.WEEKLY,
       deadlineDays: 5,
-      reminderBefore: 2,
-      linhVuc: 'An ninh trật tự',
-    },
-    {
-      title: 'Báo cáo tổng hợp tình hình tệ nạn xã hội quý II',
-      content:
-        'Tổng hợp số liệu về tệ nạn xã hội, phân tích xu hướng, đề xuất biện pháp phòng ngừa.',
-      expectedResult: 'Báo cáo đầy đủ số liệu, được lãnh đạo phê duyệt.',
-      leadCode: 'CATQ',
-      cooperatingCodes: ['SCTP'],
-      status: TaskStatus.OVERDUE,
-      frequency: TaskFrequency.QUARTERLY,
-      deadlineDays: -3,
-      reminderBefore: 3,
-      linhVuc: 'An ninh trật tự',
-    },
-    // CSGT - Cảnh sát Giao thông
-    {
-      title: 'Tuần tra kiểm soát giao thông trên quốc lộ 1A',
-      content:
-        'Tổ chức tuần tra, kiểm tra phương tiện vi phạm luật giao thông, lập biên bản xử phạt.',
-      expectedResult:
-        'Lập ít nhất 10 biên bản xử phạt/ngày, đảm bảo trật tự an toàn giao thông.',
-      leadCode: 'CSGT',
-      status: TaskStatus.IN_PROGRESS,
-      frequency: TaskFrequency.WEEKLY,
-      deadlineDays: 3,
       reminderBefore: 1,
       linhVuc: 'Trật tự an toàn giao thông',
     },
+    // 3
     {
-      title: 'Xử lý điểm đen tai nạn giao thông tại ngã tư Trung tâm',
-      content:
-        'Khảo sát, lập phương án xử lý điểm đen tai nạn, đề xuất cải tạo hạ tầng giao thông.',
-      expectedResult: 'Có biện pháp xử lý kịp thời, giảm nguy cơ tai nạn.',
-      leadCode: 'CSGT',
-      cooperatingCodes: ['CACD'],
-      status: TaskStatus.PENDING,
-      frequency: TaskFrequency.ONCE,
-      deadlineDays: 14,
-      reminderBefore: 3,
-      linhVuc: 'Trật tự an toàn giao thông',
-    },
-    // CACD - Cảnh sát Cơ động
-    {
-      title: 'Bảo vệ an ninh Lễ hội Văn hóa tỉnh',
-      content:
-        'Triển khai lực lượng đảm bảo an ninh trật tự trong suốt thời gian diễn ra lễ hội, phối hợp xử lý tình huống.',
-      expectedResult: 'Lễ hội diễn ra an toàn, không có sự cố mất an ninh.',
-      leadCode: 'CACD',
-      cooperatingCodes: ['CSGT', 'CATQ'],
-      status: TaskStatus.PENDING,
-      frequency: TaskFrequency.ONCE,
-      deadlineDays: 10,
-      reminderBefore: 2,
-      linhVuc: 'An ninh trật tự',
-    },
-    // HSKT - Hồ sơ Kế toán
-    {
-      title: 'Báo cáo tài chính và quyết toán quý I/2026',
-      content:
-        'Tổng hợp thu chi, lập báo cáo tài chính quý I, quyết toán các khoản chi phát sinh.',
-      expectedResult:
-        'Báo cáo tài chính hoàn chỉnh, được kiểm toán và phê duyệt.',
-      leadCode: 'HSKT',
-      cooperatingCodes: ['TTTH'],
-      status: TaskStatus.PENDING,
-      frequency: TaskFrequency.QUARTERLY,
-      deadlineDays: 2,
-      reminderBefore: 1,
-      linhVuc: 'Hành chính - Tài chính',
-    },
-    {
-      title: 'Cập nhật và rà soát hồ sơ cán bộ toàn đơn vị',
-      content:
-        'Kiểm tra, cập nhật hồ sơ nhân sự, tài liệu lưu trữ; sắp xếp theo đúng quy định.',
-      expectedResult:
-        'Toàn bộ hồ sơ được cập nhật, sắp xếp khoa học, đúng quy định.',
-      leadCode: 'HSKT',
-      status: TaskStatus.IN_PROGRESS,
-      frequency: TaskFrequency.MONTHLY,
-      deadlineDays: 10,
-      reminderBefore: 3,
-      linhVuc: 'Hành chính - Tài chính',
-    },
-    // PCCC - Phòng cháy chữa cháy
-    {
-      title: 'Kiểm tra công tác PCCC tại các cơ sở kinh doanh',
-      content:
-        'Kiểm tra thiết bị PCCC, lối thoát hiểm, biển báo; lập biên bản xử lý vi phạm nếu có.',
-      expectedResult:
-        'Kiểm tra ít nhất 20 cơ sở, xử lý 100% vi phạm được phát hiện.',
-      leadCode: 'PCCC',
+      title: 'Kiểm tra an toàn phòng cháy chữa cháy các cơ sở sản xuất kinh doanh',
+      content: 'Kiểm tra định kỳ hệ thống PCCC, lối thoát hiểm, bình chữa cháy tại các cơ sở trên địa bàn. Lập biên bản và xử phạt vi phạm.',
+      expectedResult: 'Kiểm tra ít nhất 30 cơ sở; 100% vi phạm được phát hiện xử lý hoặc yêu cầu khắc phục.',
+      leadCode: 'PC07',
+      cooperatingCodes: ['PK02'],
       status: TaskStatus.IN_PROGRESS,
       frequency: TaskFrequency.MONTHLY,
       deadlineDays: 8,
       reminderBefore: 2,
       linhVuc: 'Phòng cháy chữa cháy',
     },
+    // 4
     {
-      title: 'Diễn tập phương án chữa cháy và cứu nạn khu công nghiệp',
-      content:
-        'Tổ chức diễn tập thực tế tại khu công nghiệp, kiểm tra phương án, nâng cao năng lực ứng phó.',
-      expectedResult:
-        'Diễn tập thành công, rút kinh nghiệm và cập nhật phương án.',
-      leadCode: 'PCCC',
-      cooperatingCodes: ['CACD'],
+      title: 'Điều tra tội phạm lừa đảo chiếm đoạt tài sản qua mạng',
+      content: 'Tiếp nhận và xử lý các vụ lừa đảo trực tuyến; phân tích dữ liệu số, truy vết tài khoản, thu thập bằng chứng điện tử theo quy định pháp luật.',
+      expectedResult: 'Giải quyết ít nhất 5 vụ việc; truy vết được đối tượng trong ít nhất 2 vụ án nghiêm trọng.',
+      leadCode: 'PA05',
+      cooperatingCodes: ['PC03'],
       status: TaskStatus.PENDING,
-      frequency: TaskFrequency.QUARTERLY,
+      frequency: TaskFrequency.ONCE,
       deadlineDays: 20,
       reminderBefore: 5,
-      linhVuc: 'Phòng cháy chữa cháy',
+      linhVuc: 'An ninh mạng',
     },
-    // QLTT - Quản lý Thị trường
+    // 5
     {
-      title: 'Kiểm tra hàng hóa nhập lậu tại các cửa hàng',
-      content:
-        'Thanh tra, kiểm tra nguồn gốc hàng hóa, xử lý hàng nhập lậu, hàng kém chất lượng.',
-      expectedResult:
-        'Kiểm tra ít nhất 15 cơ sở, tịch thu hàng vi phạm nếu có.',
-      leadCode: 'QLTT',
-      cooperatingCodes: ['ATKT'],
+      title: 'Rà soát người nước ngoài cư trú trái phép trên địa bàn tỉnh',
+      content: 'Phối hợp với các phòng ban rà soát, xác minh tình trạng cư trú của người nước ngoài; phát hiện và xử lý trường hợp cư trú quá hạn hoặc không có giấy tờ hợp lệ.',
+      expectedResult: 'Rà soát 100% cơ sở lưu trú; lập danh sách và xử lý người nước ngoài vi phạm.',
+      leadCode: 'PA08',
+      cooperatingCodes: ['PA01'],
       status: TaskStatus.PENDING,
       frequency: TaskFrequency.MONTHLY,
       deadlineDays: 12,
       reminderBefore: 3,
-      linhVuc: 'Kinh tế - Thương mại',
+      linhVuc: 'Quản lý xuất nhập cảnh',
     },
-    // BLNN - Bảo vệ Lâm nghiệp
+    // 6
     {
-      title: 'Tuần tra bảo vệ rừng khu vực phía Bắc',
-      content:
-        'Tổ chức tuần tra rừng, phát hiện và xử lý vi phạm khai thác trái phép, ngăn chặn cháy rừng.',
-      expectedResult:
-        'Không có vụ khai thác rừng trái phép, phát hiện sớm nguy cơ cháy rừng.',
-      leadCode: 'BLNN',
-      status: TaskStatus.IN_PROGRESS,
-      frequency: TaskFrequency.WEEKLY,
-      deadlineDays: 4,
-      reminderBefore: 1,
-      linhVuc: 'Tài nguyên - Môi trường',
-    },
-    // CNHC - Cảnh sát Nước Hình sự
-    {
-      title: 'Tuần tra kiểm soát vùng nước nội địa',
-      content:
-        'Tuần tra trên các sông, hồ; kiểm tra giấy tờ phương tiện thủy; xử lý vi phạm.',
-      expectedResult:
-        'Đảm bảo trật tự an toàn giao thông đường thủy, không có sự cố.',
-      leadCode: 'CNHC',
-      status: TaskStatus.PENDING,
-      frequency: TaskFrequency.WEEKLY,
-      deadlineDays: 6,
-      reminderBefore: 1,
-      linhVuc: 'Trật tự an toàn giao thông',
-    },
-    // TCDH - Điều tra Ma tuý
-    {
-      title: 'Điều tra đường dây vận chuyển ma tuý liên tỉnh',
-      content:
-        'Trinh sát, thu thập thông tin, phối hợp điều tra đường dây buôn bán, vận chuyển ma túy.',
-      expectedResult: 'Triệt phá đường dây, bắt giữ các đối tượng liên quan.',
-      leadCode: 'TCDH',
-      cooperatingCodes: ['CAO'],
-      status: TaskStatus.IN_PROGRESS,
-      frequency: TaskFrequency.ONCE,
-      deadlineDays: 15,
-      reminderBefore: 3,
-      linhVuc: 'Phòng chống ma tuý',
-    },
-    // ATKT - An toàn Kinh tế
-    {
-      title: 'Điều tra vụ gian lận thương mại tại doanh nghiệp X',
-      content:
-        'Thu thập chứng cứ, làm việc với các bên liên quan, xác định hành vi gian lận và thiệt hại.',
-      expectedResult:
-        'Lập hồ sơ vụ án, đề xuất khởi tố hoặc xử phạt hành chính.',
-      leadCode: 'ATKT',
-      cooperatingCodes: ['QLTT'],
-      status: TaskStatus.PENDING,
-      frequency: TaskFrequency.ONCE,
-      deadlineDays: 18,
-      reminderBefore: 5,
-      linhVuc: 'Kinh tế - Thương mại',
-    },
-    // SCTP - Sinh cảnh Trị an
-    {
-      title: 'Triển khai chiến dịch phòng ngừa tội phạm khu dân cư',
-      content:
-        'Tổ chức tuyên truyền pháp luật, vận động nhân dân tham gia phòng chống tội phạm tại địa bàn.',
-      expectedResult:
-        'Tổ chức ít nhất 5 buổi tuyên truyền, giảm tội phạm địa bàn.',
-      leadCode: 'SCTP',
-      cooperatingCodes: ['CATQ', 'CAO'],
-      status: TaskStatus.PENDING,
-      frequency: TaskFrequency.MONTHLY,
-      deadlineDays: 22,
-      reminderBefore: 5,
-      linhVuc: 'Phòng ngừa tội phạm',
-    },
-    // CVKT - Cảnh vệ
-    {
-      title: 'Kiểm tra an ninh kho vũ khí và trang thiết bị',
-      content:
-        'Kiểm kê, đối chiếu số lượng, kiểm tra tình trạng bảo quản vũ khí và trang thiết bị trong kho.',
-      expectedResult:
-        'Báo cáo kiểm kê đầy đủ, phát hiện và xử lý ngay nếu có sai sót.',
-      leadCode: 'CVKT',
-      status: TaskStatus.COMPLETED,
-      frequency: TaskFrequency.MONTHLY,
-      deadlineDays: -2,
-      linhVuc: 'An ninh nội bộ',
-    },
-    // TTTH - Thông tấn Thông tin
-    {
-      title: 'Cập nhật và bảo trì hệ thống thông tin nội bộ',
-      content:
-        'Kiểm tra, nâng cấp phần mềm, sao lưu dữ liệu, đảm bảo hệ thống thông tin hoạt động ổn định.',
-      expectedResult:
-        'Hệ thống hoạt động ổn định 100%, dữ liệu được sao lưu đầy đủ.',
-      leadCode: 'TTTH',
-      status: TaskStatus.IN_PROGRESS,
-      frequency: TaskFrequency.MONTHLY,
-      deadlineDays: 9,
-      reminderBefore: 2,
-      linhVuc: 'Công nghệ thông tin',
-    },
-    // DANH - Đào tạo
-    {
-      title: 'Tổ chức lớp bồi dưỡng chính trị cho cán bộ',
-      content:
-        'Tổ chức lớp học bồi dưỡng nghiệp vụ, lý luận chính trị cho toàn thể cán bộ theo kế hoạch năm.',
-      expectedResult:
-        'Ít nhất 80% cán bộ hoàn thành chương trình bồi dưỡng, đạt yêu cầu.',
-      leadCode: 'DANH',
+      title: 'Đánh giá, xếp loại cán bộ chiến sĩ năm 2026',
+      content: 'Triển khai công tác đánh giá kết quả công tác, xếp loại hoàn thành nhiệm vụ cho toàn thể cán bộ chiến sĩ năm 2026 theo quy định của Bộ Công an.',
+      expectedResult: 'Hoàn thành đánh giá 100% cán bộ đúng thời hạn; tổng hợp báo cáo kết quả gửi Bộ.',
+      leadCode: 'PX01',
+      cooperatingCodes: ['PX03'],
       status: TaskStatus.PENDING,
       frequency: TaskFrequency.QUARTERLY,
-      deadlineDays: 25,
+      deadlineDays: 30,
       reminderBefore: 7,
-      linhVuc: 'Đào tạo - Huấn luyện',
+      linhVuc: 'Tổ chức - Cán bộ',
+    },
+    // 7
+    {
+      title: 'Xây dựng kế hoạch công tác 6 tháng cuối năm 2026',
+      content: 'Tổng hợp kết quả 6 tháng đầu năm, xây dựng kế hoạch công tác chi tiết cho 6 tháng cuối năm của toàn đơn vị, trình lãnh đạo phê duyệt.',
+      expectedResult: 'Kế hoạch đầy đủ, sát thực tiễn, được Giám đốc Công an tỉnh phê duyệt trước ngày 15/6.',
+      leadCode: 'PV01',
+      cooperatingCodes: ['PX01', 'PH01'],
+      status: TaskStatus.IN_PROGRESS,
+      frequency: TaskFrequency.ONCE,
+      deadlineDays: 7,
+      reminderBefore: 2,
+      linhVuc: 'Tham mưu - Tổng hợp',
+    },
+    // 8
+    {
+      title: 'Điều tra vụ gian lận thuế tại doanh nghiệp xuất nhập khẩu',
+      content: 'Thu thập chứng cứ, làm việc với cơ quan thuế và hải quan; xác định hành vi gian lận và định lượng thiệt hại ngân sách nhà nước.',
+      expectedResult: 'Lập đầy đủ hồ sơ vụ án; đề xuất khởi tố hoặc xử phạt hành chính theo quy định.',
+      leadCode: 'PC03',
+      cooperatingCodes: ['PA04'],
+      status: TaskStatus.PENDING,
+      frequency: TaskFrequency.ONCE,
+      deadlineDays: 25,
+      reminderBefore: 5,
+      linhVuc: 'Kinh tế - Tài chính',
+    },
+    // 9
+    {
+      title: 'Bảo vệ an ninh Kỳ họp thứ 9 Hội đồng nhân dân tỉnh',
+      content: 'Triển khai lực lượng bảo vệ, kiểm soát an ninh trật tự trong suốt thời gian diễn ra kỳ họp HĐND tỉnh; phối hợp phân luồng giao thông khu vực.',
+      expectedResult: 'Kỳ họp diễn ra an toàn tuyệt đối, không để xảy ra sự cố mất an ninh trật tự.',
+      leadCode: 'PK02',
+      cooperatingCodes: ['PC08'],
+      status: TaskStatus.PENDING,
+      frequency: TaskFrequency.ONCE,
+      deadlineDays: 4,
+      reminderBefore: 1,
+      linhVuc: 'Bảo vệ sự kiện',
+    },
+    // 10
+    {
+      title: 'Tổng rà soát, thu hồi vũ khí và vật liệu nổ trong nhân dân',
+      content: 'Triển khai chiến dịch vận động, thu hồi vũ khí, vật liệu nổ, công cụ hỗ trợ tự chế trong nhân dân; phối hợp tuyên truyền pháp luật về quản lý vũ khí.',
+      expectedResult: 'Thu hồi tối thiểu 50 khẩu vũ khí các loại; 100% xã/phường hoàn thành rà soát.',
+      leadCode: 'PC06',
+      cooperatingCodes: ['PC02'],
+      status: TaskStatus.IN_PROGRESS,
+      frequency: TaskFrequency.MONTHLY,
+      deadlineDays: 10,
+      reminderBefore: 3,
+      linhVuc: 'Quản lý hành chính',
+    },
+    // 11
+    {
+      title: 'Phòng chống hoạt động tuyên truyền chống phá Nhà nước trên mạng xã hội',
+      content: 'Theo dõi, phát hiện và xử lý các hoạt động tuyên truyền, kích động chống phá Nhà nước trên mạng xã hội và các nền tảng trực tuyến.',
+      expectedResult: 'Phát hiện và xử lý kịp thời 100% tài khoản/nội dung vi phạm; báo cáo định kỳ lên cấp trên.',
+      leadCode: 'PA02',
+      cooperatingCodes: ['PA05', 'PA03'],
+      status: TaskStatus.PENDING,
+      frequency: TaskFrequency.MONTHLY,
+      deadlineDays: 18,
+      reminderBefore: 4,
+      linhVuc: 'An ninh nội địa',
+    },
+    // 12
+    {
+      title: 'Kiểm kê trang thiết bị, vũ khí, công cụ hỗ trợ toàn đơn vị',
+      content: 'Tổ chức kiểm kê toàn bộ trang bị, phương tiện, vũ khí tại tất cả các phòng ban. Đối chiếu với sổ sách, báo cáo sai lệch.',
+      expectedResult: 'Báo cáo kiểm kê đầy đủ, chính xác; xử lý ngay các sai lệch phát hiện được.',
+      leadCode: 'PH10',
+      status: TaskStatus.COMPLETED,
+      frequency: TaskFrequency.QUARTERLY,
+      deadlineDays: -5,
+      linhVuc: 'Hậu cần - Kỹ thuật',
+    },
+    // 13
+    {
+      title: 'Giám định kỹ thuật hình sự vụ cháy nhà kho tại khu công nghiệp',
+      content: 'Khám nghiệm hiện trường, lấy mẫu giám định, phân tích nguyên nhân vụ cháy; xác định có yếu tố phóng hỏa hay không.',
+      expectedResult: 'Kết luận giám định chính xác, đúng thời hạn, phục vụ điều tra vụ án.',
+      leadCode: 'PC09',
+      cooperatingCodes: ['PC02'],
+      status: TaskStatus.COMPLETED,
+      frequency: TaskFrequency.ONCE,
+      deadlineDays: -3,
+      linhVuc: 'Giám định kỹ thuật hình sự',
+    },
+    // 14
+    {
+      title: 'Thanh tra công tác tiếp dân và giải quyết đơn thư khiếu nại tố cáo',
+      content: 'Thanh tra việc thực hiện quy trình tiếp dân, giải quyết đơn thư tại các đơn vị; đánh giá kết quả thực hiện so với chỉ tiêu kế hoạch.',
+      expectedResult: 'Kết luận thanh tra chi tiết; kiến nghị xử lý các đơn vị không đạt yêu cầu.',
+      leadCode: 'PX05',
+      status: TaskStatus.PENDING,
+      frequency: TaskFrequency.QUARTERLY,
+      deadlineDays: 35,
+      reminderBefore: 7,
+      linhVuc: 'Thanh tra - Kiểm tra',
+    },
+    // 15
+    {
+      title: 'Quyết toán ngân sách quý II/2026 và lập dự toán quý III',
+      content: 'Tổng hợp chi tiết thu chi ngân sách quý II, lập báo cáo quyết toán gửi cơ quan tài chính. Đồng thời xây dựng dự toán ngân sách quý III trình duyệt.',
+      expectedResult: 'Báo cáo quyết toán quý II hoàn chỉnh, được phê duyệt; dự toán quý III được phân bổ đúng hạn.',
+      leadCode: 'PH01',
+      cooperatingCodes: ['PH10'],
+      status: TaskStatus.OVERDUE,
+      frequency: TaskFrequency.QUARTERLY,
+      deadlineDays: -2,
+      reminderBefore: 5,
+      linhVuc: 'Tài chính - Kế toán',
+    },
+    // 16
+    {
+      title: 'Điều tra vụ tham nhũng trong đấu thầu dự án đầu tư công',
+      content: 'Xác minh thông tin tố giác về hành vi thông thầu, nâng khống giá trị hợp đồng trong các dự án đầu tư công; thu thập tài liệu và lời khai các bên liên quan.',
+      expectedResult: 'Kết luận điều tra xác thực hoặc bác bỏ tố giác; đề xuất xử lý theo đúng quy định pháp luật.',
+      leadCode: 'PA04',
+      cooperatingCodes: ['PC03'],
+      status: TaskStatus.IN_PROGRESS,
+      frequency: TaskFrequency.ONCE,
+      deadlineDays: 22,
+      reminderBefore: 5,
+      linhVuc: 'An ninh kinh tế',
+    },
+    // 17
+    {
+      title: 'Rà soát và tổ chức thi hành án phạt tù treo trên địa bàn',
+      content: 'Cập nhật danh sách, rà soát tình hình chấp hành điều kiện hưởng án treo; phối hợp địa phương giám sát, quản lý, giáo dục người chấp hành án.',
+      expectedResult: 'Danh sách cập nhật đầy đủ; 100% người có án treo được giám sát theo đúng quy định.',
+      leadCode: 'PC10',
+      cooperatingCodes: ['PC01'],
+      status: TaskStatus.PENDING,
+      frequency: TaskFrequency.MONTHLY,
+      deadlineDays: 14,
+      reminderBefore: 3,
+      linhVuc: 'Thi hành án',
+    },
+    // 18
+    {
+      title: 'Xác minh đối tượng người nước ngoài có nghi vấn hoạt động tình báo',
+      content: 'Xác minh nhân thân, hoạt động của các đối tượng người nước ngoài nghi vấn thu thập thông tin nhạy cảm; phối hợp cơ quan hữu quan xử lý theo quy định.',
+      expectedResult: 'Kết quả xác minh rõ ràng; nếu xác định vi phạm thì đề xuất biện pháp xử lý phù hợp.',
+      leadCode: 'PA01',
+      cooperatingCodes: ['PA08'],
+      status: TaskStatus.PENDING,
+      frequency: TaskFrequency.ONCE,
+      deadlineDays: 9,
+      reminderBefore: 2,
+      linhVuc: 'An ninh đối ngoại',
+    },
+    // 19
+    {
+      title: 'Tổ chức Hội nghị Sơ kết công tác 6 tháng đầu năm 2026',
+      content: 'Chuẩn bị nội dung, tài liệu, báo cáo phục vụ Hội nghị Sơ kết; tổ chức hội nghị toàn đơn vị, ghi nhận kết quả và phương hướng nhiệm vụ 6 tháng cuối năm.',
+      expectedResult: 'Hội nghị tổ chức thành công; nghị quyết được thông qua và triển khai đến toàn thể các đơn vị.',
+      leadCode: 'PX03',
+      cooperatingCodes: ['PV01', 'PX01'],
+      status: TaskStatus.PENDING,
+      frequency: TaskFrequency.ONCE,
+      deadlineDays: 6,
+      reminderBefore: 2,
+      linhVuc: 'Công tác chính trị',
     },
   ];
 
   const taskMap = new Map<number, Task>();
   for (let i = 0; i < tasksData.length; i++) {
     const td = tasksData[i];
-    const existingTask = await taskRepository.findOne({
-      where: { title: td.title },
-    });
-    if (!existingTask) {
-      const leadDept = dept(td.leadCode);
-      const cooperatingDepts = (td.cooperatingCodes ?? [])
-        .map((c) => dept(c))
-        .filter(Boolean) as Department[];
+    const leadDept = dept(td.leadCode);
+    const cooperatingDepts = (td.cooperatingCodes ?? [])
+      .map((c) => dept(c))
+      .filter(Boolean) as Department[];
 
-      const deadline = new Date(
-        Date.now() + td.deadlineDays * 24 * 60 * 60 * 1000,
-      );
-      const task = taskRepository.create({
-        title: td.title,
-        content: td.content,
-        expectedResult: td.expectedResult,
-        linhVuc: td.linhVuc,
-        leadDepartmentId: leadDept?.id,
-        cooperatingDepartments: cooperatingDepts,
-        status: td.status,
-        frequency: td.frequency,
-        deadline,
-        assignedById: adminId,
-        ...(td.reminderBefore !== undefined && {
-          reminderBefore: td.reminderBefore,
-        }),
-      });
-      const saved = await taskRepository.save(task);
-      taskMap.set(i, saved);
-      const coopNames = cooperatingDepts.map((d) => d.code).join(', ');
-      console.log(
-        `  ✓ [${td.leadCode}${coopNames ? ' + ' + coopNames : ''}] ${td.title}`,
-      );
-    } else {
-      taskMap.set(i, existingTask);
-      console.log(`  ✓ Task exists: ${td.title}`);
-    }
+    const deadline = new Date(Date.now() + td.deadlineDays * 24 * 60 * 60 * 1000);
+    const task = taskRepository.create({
+      title: td.title,
+      content: td.content,
+      expectedResult: td.expectedResult,
+      linhVuc: td.linhVuc,
+      leadDepartmentId: leadDept?.id,
+      cooperatingDepartments: cooperatingDepts,
+      status: td.status,
+      frequency: td.frequency,
+      deadline,
+      assignedById: adminId,
+      ...(td.reminderBefore !== undefined && { reminderBefore: td.reminderBefore }),
+    });
+    const saved = await taskRepository.save(task);
+    taskMap.set(i, saved);
+    const coopNames = cooperatingDepts.map((d) => d.code).join(', ');
+    console.log(`  ✓ [${td.leadCode}${coopNames ? ' + ' + coopNames : ''}] ${td.title.substring(0, 55)}...`);
   }
 
-  // Create task results
+  // ───────────────────────────────────────────
+  // TASK RESULTS
+  // ───────────────────────────────────────────
   console.log('\n📊 Creating task results...');
   const resultsData = [
-    // Task 0: Điều tra vụ trộm (CAO chủ trì, CATQ phối hợp)
     {
-      taskIndex: 0,
-      deptCode: 'CAO',
-      content:
-        'Đã phỏng vấn 5 nhân chứng, thu thập 3 đoạn video camera an ninh, xác định được 2 nghi phạm.',
-      completionRate: 40,
-      username: 'cshs1',
+      taskIndex: 0, deptCode: 'PC02', username: 'cb_pc02_1', completionRate: 45,
+      content: 'Đã thu thập 4 đoạn camera an ninh, xác định 3 nghi phạm. Đang xác minh nhân thân và phân tích dữ liệu để lập lệnh bắt.',
     },
     {
-      taskIndex: 0,
-      deptCode: 'CATQ',
-      content:
-        'Đã kiểm tra khu vực xung quanh hiện trường, không phát hiện đối tượng liên quan khác.',
-      completionRate: 30,
-      username: 'csatxh1',
+      taskIndex: 0, deptCode: 'PC09', username: 'tp_pc09', completionRate: 80,
+      content: 'Hoàn thành khám nghiệm hiện trường, thu thập dấu vân tay và mẫu sinh học. Kết quả giám định đang chờ xử lý phòng thí nghiệm.',
     },
-    // Task 1: Điều tra cố ý gây thương tích (hoàn thành)
     {
-      taskIndex: 1,
-      deptCode: 'CAO',
-      content:
-        'Vụ án hoàn tất điều tra, bị can đã bị bắt, hồ sơ đã chuyển sang VKS để khởi tố.',
-      completionRate: 100,
-      username: 'cshs2',
+      taskIndex: 1, deptCode: 'PC04', username: 'tp_pc04', completionRate: 60,
+      content: 'Đã xác định 5 đối tượng liên quan, đang theo dõi và chờ thời điểm thích hợp để triển khai phá án đồng loạt trên nhiều địa bàn.',
     },
-    // Task 5: Tuần tra CSGT
     {
-      taskIndex: 5,
-      deptCode: 'CSGT',
-      content:
-        'Tuần tra từ 6h–18h, lập 12 biên bản tốc độ, 8 biên bản không đội mũ bảo hiểm.',
-      completionRate: 50,
-      username: 'csgt1',
+      taskIndex: 1, deptCode: 'PC02', username: 'cb_pc02_2', completionRate: 70,
+      content: 'Hỗ trợ xác minh tiền án tiền sự của các đối tượng, cung cấp tài liệu liên quan cho PC04.',
     },
-    // Task 9: Hồ sơ kế toán
     {
-      taskIndex: 9,
-      deptCode: 'HSKT',
-      content:
-        'Đã rà soát 60% hồ sơ cán bộ, đang tiến hành cập nhật phần còn lại.',
-      completionRate: 60,
-      username: 'admin',
+      taskIndex: 3, deptCode: 'PC07', username: 'cb_pc07_1', completionRate: 67,
+      content: 'Đã kiểm tra 20/30 cơ sở. Phát hiện 7 cơ sở vi phạm về bình chữa cháy và lối thoát hiểm, đã lập 7 biên bản xử phạt hành chính.',
     },
-    // Task 10: PCCC
     {
-      taskIndex: 10,
-      deptCode: 'PCCC',
-      content:
-        'Đã kiểm tra 14/20 cơ sở, phát hiện 3 cơ sở vi phạm về bình chữa cháy, đã lập biên bản.',
-      completionRate: 70,
-      username: 'truong_pccc',
+      taskIndex: 7, deptCode: 'PV01', username: 'tp_pv01', completionRate: 75,
+      content: 'Đã tổng hợp báo cáo 6 tháng đầu năm từ tất cả 28 phòng ban. Đang dự thảo kế hoạch 6 tháng cuối năm, dự kiến hoàn thành trong 2 ngày.',
     },
-    // Task 13: BLNN
     {
-      taskIndex: 13,
-      deptCode: 'BLNN',
-      content:
-        'Tuần tra 4 tuyến đường rừng phía Bắc, không phát hiện vi phạm khai thác trái phép.',
-      completionRate: 30,
-      username: 'blnn1',
+      taskIndex: 10, deptCode: 'PC06', username: 'tp_pc06', completionRate: 64,
+      content: 'Đã tổ chức 12 đợt vận động tại các xã/phường. Thu hồi được 32 khẩu súng tự chế, 5 khẩu súng quân dụng và nhiều loại hung khí khác.',
     },
-    // Task 16: CVKT (hoàn thành)
     {
-      taskIndex: 16,
-      deptCode: 'CVKT',
-      content:
-        'Hoàn thành kiểm kê toàn bộ kho, số lượng đủ, tình trạng bảo quản tốt. Báo cáo đã nộp lãnh đạo.',
-      completionRate: 100,
-      username: 'truong_cvkt',
+      taskIndex: 10, deptCode: 'PC02', username: 'cb_pc02_1', completionRate: 50,
+      content: 'Phối hợp tại 8 địa bàn phức tạp; hỗ trợ vận động 3 đối tượng nghi có vũ khí tự nộp cho cơ quan chức năng.',
     },
-    // Task 17: TTTH
     {
-      taskIndex: 17,
-      deptCode: 'TTTH',
-      content:
-        'Đã cập nhật phần mềm cho 80% máy trạm, sao lưu dữ liệu hoàn tất, đang xử lý 2 sự cố nhỏ.',
-      completionRate: 80,
-      username: 'truong_ttth',
+      taskIndex: 12, deptCode: 'PH10', username: 'tp_ph10', completionRate: 100,
+      content: 'Đã hoàn thành kiểm kê toàn bộ 28 phòng ban. Số liệu khớp sổ sách; phát hiện 2 trang thiết bị hỏng, đề xuất thanh lý. Báo cáo đã nộp lãnh đạo.',
+    },
+    {
+      taskIndex: 13, deptCode: 'PC09', username: 'tp_pc09', completionRate: 100,
+      content: 'Kết luận giám định: Nguyên nhân cháy do chập điện, loại trừ yếu tố phóng hỏa. Hồ sơ giám định đã bàn giao PC02.',
+    },
+    {
+      taskIndex: 13, deptCode: 'PC02', username: 'tp_pc02', completionRate: 100,
+      content: 'Đã tiếp nhận kết quả giám định từ PC09, cập nhật vào hồ sơ vụ án và báo cáo Thủ trưởng cơ quan điều tra.',
+    },
+    {
+      taskIndex: 16, deptCode: 'PA04', username: 'tp_pa04', completionRate: 40,
+      content: 'Đã thu thập 45 tài liệu liên quan; làm việc với 8 người có liên quan. Đang phân tích tài liệu kế toán và hồ sơ đấu thầu để xác định hành vi vi phạm.',
     },
   ];
 
@@ -871,245 +532,162 @@ async function seed() {
     const deptObj = dept(r.deptCode);
     const submitter = userMap.get(r.username);
     if (task && deptObj) {
-      const exists = await taskResultRepository.findOne({
-        where: { taskId: task.id, departmentId: deptObj.id },
+      await taskResultRepository.save({
+        taskId: task.id,
+        departmentId: deptObj.id,
+        content: r.content,
+        completionRate: r.completionRate,
+        submittedById: submitter?.id,
       });
-      if (!exists) {
-        await taskResultRepository.save({
-          taskId: task.id,
-          departmentId: deptObj.id,
-          content: r.content,
-          completionRate: r.completionRate,
-          submittedById: submitter?.id,
-        });
-        console.log(
-          `  ✓ Result [${r.deptCode}] → ${task.title.substring(0, 35)}...`,
-        );
-      }
+      console.log(`  ✓ [${r.deptCode}] → ${task.title.substring(0, 45)}...`);
     }
   }
 
-  // Create task history
-  console.log('\n📝 Creating task history...');
+  // ───────────────────────────────────────────
+  // TASK HISTORIES
+  // ───────────────────────────────────────────
+  console.log('\n📝 Creating task histories...');
   const taskHistoriesData = [
     {
-      taskIndex: 4,
-      changedById: userMap.get('admin')?.id,
-      changeDescription: 'Gia hạn thời hạn từ 05/05/2026 đến 10/05/2026',
-      oldValue: { deadline: '2026-05-05' },
-      newValue: { deadline: '2026-05-10' },
+      taskIndex: 0,
+      changeDescription: 'Bổ sung PC09 vào đơn vị phối hợp để hỗ trợ giám định hiện trường',
+      oldValue: { cooperatingDepartments: ['PC01'] },
+      newValue: { cooperatingDepartments: ['PC01', 'PC09'] },
     },
     {
-      taskIndex: 5,
-      changedById: userMap.get('admin')?.id,
-      changeDescription: 'Cập nhật nội dung công việc',
-      oldValue: { content: 'Kiểm tra hồ sơ cán bộ' },
-      newValue: {
-        content: 'Kiểm tra, cập nhật hồ sơ cán bộ và tài liệu lưu trữ',
-      },
+      taskIndex: 15,
+      changeDescription: 'Gia hạn thời hạn nộp báo cáo từ 30/04/2026 đến 05/05/2026',
+      oldValue: { deadline: '2026-04-30' },
+      newValue: { deadline: '2026-05-05' },
+    },
+    {
+      taskIndex: 7,
+      changeDescription: 'Bổ sung PH01 vào đơn vị phối hợp để cung cấp số liệu ngân sách',
+      oldValue: { cooperatingDepartments: ['PX01'] },
+      newValue: { cooperatingDepartments: ['PX01', 'PH01'] },
     },
   ];
 
-  for (const historyData of taskHistoriesData) {
-    const task = taskMap.get(historyData.taskIndex);
-    if (task && historyData.changedById) {
+  for (const h of taskHistoriesData) {
+    const task = taskMap.get(h.taskIndex);
+    if (task && adminId) {
       await taskHistoryRepository.save({
         taskId: task.id,
-        changedById: historyData.changedById,
-        changeDescription: historyData.changeDescription,
-        oldValue: historyData.oldValue,
-        newValue: historyData.newValue,
-        changedAt: new Date(),
+        changedById: adminId,
+        changeDescription: h.changeDescription,
+        oldValue: h.oldValue,
+        newValue: h.newValue,
+        changedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
       });
-      console.log(
-        `  ✓ Created history for task: ${task.title.substring(0, 30)}...`,
-      );
+      console.log(`  ✓ ${task.title.substring(0, 45)}...`);
     }
   }
 
-  // Create task result history
-  console.log('\n📊 Creating task result history...');
-  const results = await taskResultRepository.find();
-  for (let i = 0; i < Math.min(2, results.length); i++) {
-    const result = results[i];
+  // ───────────────────────────────────────────
+  // TASK RESULT HISTORIES
+  // ───────────────────────────────────────────
+  console.log('\n📊 Creating task result histories...');
+  const allResults = await taskResultRepository.find({ order: { createdAt: 'DESC' } });
+  for (let i = 0; i < Math.min(3, allResults.length); i++) {
+    const r = allResults[i];
     await taskResultHistoryRepository.save({
-      taskResultId: result.id,
-      updatedById: result.submittedById,
-      content: 'Cập nhật: ' + result.content.substring(0, 50) + '...',
-      completionRate: result.completionRate,
-      attachments: result.attachments || [],
-      createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      taskResultId: r.id,
+      updatedById: r.submittedById,
+      content: 'Cập nhật trước: ' + r.content.substring(0, 60) + '...',
+      completionRate: Math.max(0, (r.completionRate ?? 0) - 20),
+      attachments: [],
+      createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
     });
-    console.log(`  ✓ Created result history for result ID: ${result.id}`);
+    console.log(`  ✓ Result history ID: ${r.id}`);
   }
 
-  // Create login logs
+  // ───────────────────────────────────────────
+  // LOGIN LOGS
+  // ───────────────────────────────────────────
   console.log('\n🔐 Creating login logs...');
-  const loginUsersData = [
-    { userId: userMap.get('admin')?.id, isSuccess: true },
-    { userId: userMap.get('truong_cao')?.id, isSuccess: true },
-    { userId: userMap.get('cshs1')?.id, isSuccess: true },
-    {
-      userId: userMap.get('truong_csgt')?.id,
-      isSuccess: false,
-      failureReason: 'Invalid password',
-    },
-    { userId: userMap.get('admin')?.id, isSuccess: true },
+  const loginLogsData = [
+    { username: 'admin',      isSuccess: true },
+    { username: 'tp_pc02',   isSuccess: true },
+    { username: 'tp_pc04',   isSuccess: true },
+    { username: 'tp_pc08',   isSuccess: false, failureReason: 'Sai mật khẩu' },
+    { username: 'cb_pc02_1', isSuccess: true },
+    { username: 'tp_ph01',   isSuccess: true },
+    { username: 'tp_pa05',   isSuccess: true },
+    { username: 'admin',      isSuccess: true },
   ];
 
-  for (let i = 0; i < loginUsersData.length; i++) {
-    const loginData = loginUsersData[i];
-    if (loginData.userId) {
-      const loginPayload: any = {
-        userId: loginData.userId,
-        ipAddress: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-        isSuccess: loginData.isSuccess,
-        loginAt: new Date(Date.now() - (5 - i) * 60 * 60 * 1000),
-        ...(loginData.failureReason && {
-          failureReason: loginData.failureReason,
-        }),
-      };
-      await loginLogRepository.save(loginPayload);
-      console.log(
-        `  ✓ Created login log: ${loginData.isSuccess ? 'Success' : 'Failed'}`,
-      );
+  for (let i = 0; i < loginLogsData.length; i++) {
+    const ld = loginLogsData[i];
+    const user = userMap.get(ld.username);
+    if (user) {
+      await loginLogRepository.save({
+        userId: user.id,
+        ipAddress: `192.168.${10 + Math.floor(i / 3)}.${100 + i * 11}`,
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        isSuccess: ld.isSuccess,
+        loginAt: new Date(Date.now() - (8 - i) * 60 * 60 * 1000),
+        ...(!ld.isSuccess && { failureReason: (ld as any).failureReason }),
+      });
+      console.log(`  ✓ [${ld.username}] ${ld.isSuccess ? 'Thành công' : 'Thất bại — ' + (ld as any).failureReason}`);
     }
   }
 
-  // Create notifications
+  // ───────────────────────────────────────────
+  // NOTIFICATIONS
+  // ───────────────────────────────────────────
   console.log('\n🔔 Creating notifications...');
   const notificationsData = [
-    {
-      username: 'cshs1',
-      taskIndex: 0,
-      title: 'Nhiệm vụ mới được giao',
-      message:
-        'Bạn được giao nhiệm vụ: Điều tra vụ trộm cắp tài sản tại phường Hòa Phú',
-      isRead: false,
-    },
-    {
-      username: 'csatxh1',
-      taskIndex: 0,
-      title: 'Nhiệm vụ phối hợp',
-      message:
-        'Phòng bạn được giao phối hợp thực hiện nhiệm vụ điều tra vụ trộm cắp',
-      isRead: false,
-    },
-    {
-      username: 'cshs1',
-      taskIndex: 1,
-      title: 'Nhiệm vụ hoàn thành',
-      message: 'Nhiệm vụ "Điều tra vụ cố ý gây thương tích" đã hoàn thành',
-      isRead: true,
-    },
-    {
-      username: 'csgt1',
-      taskIndex: 5,
-      title: 'Nhắc nhở: Sắp đến hạn',
-      message: 'Nhiệm vụ tuần tra giao thông sắp đến hạn trong 3 ngày',
-      isRead: false,
-    },
-    {
-      username: 'csatxh1',
-      taskIndex: 3,
-      title: 'Nhiệm vụ mới được giao',
-      message:
-        'Bạn được giao nhiệm vụ: Kiểm tra an ninh trật tự tại chợ trung tâm',
-      isRead: false,
-    },
-    {
-      username: 'truong_catq',
-      taskIndex: 4,
-      title: 'Cảnh báo: Nhiệm vụ quá hạn',
-      message:
-        'Nhiệm vụ "Báo cáo tệ nạn xã hội quý II" đã quá hạn, cần giải trình',
-      isRead: false,
-    },
-    {
-      username: 'truong_pccc',
-      taskIndex: 10,
-      title: 'Nhiệm vụ mới được giao',
-      message:
-        'Bạn được giao nhiệm vụ: Kiểm tra công tác PCCC tại các cơ sở kinh doanh',
-      isRead: true,
-    },
-    {
-      username: 'blnn1',
-      taskIndex: 13,
-      title: 'Nhiệm vụ mới được giao',
-      message: 'Bạn được giao nhiệm vụ: Tuần tra bảo vệ rừng khu vực phía Bắc',
-      isRead: false,
-    },
-    {
-      username: 'truong_tcdh',
-      taskIndex: 15,
-      title: 'Nhiệm vụ mới được giao',
-      message: 'Bạn được giao nhiệm vụ: Điều tra đường dây ma tuý liên tỉnh',
-      isRead: false,
-    },
-    {
-      username: 'truong_cao',
-      taskIndex: 15,
-      title: 'Nhiệm vụ phối hợp',
-      message:
-        'Phòng bạn được giao phối hợp điều tra đường dây vận chuyển ma tuý',
-      isRead: false,
-    },
+    { username: 'cb_pc02_1', taskIndex: 0,  isRead: false, title: 'Nhiệm vụ mới được giao', message: 'PC02 được giao chủ trì điều tra vụ trộm cắp tài sản có tổ chức tại khu công nghiệp' },
+    { username: 'tp_pc09',   taskIndex: 0,  isRead: false, title: 'Nhiệm vụ phối hợp',      message: 'PC09 được giao phối hợp điều tra vụ trộm cắp tại khu công nghiệp, cần cử cán bộ tham gia khám nghiệm hiện trường' },
+    { username: 'tp_pc04',   taskIndex: 1,  isRead: false, title: 'Nhiệm vụ mới được giao', message: 'PC04 được giao chủ trì triệt phá đường dây vận chuyển ma túy liên tỉnh' },
+    { username: 'cb_pc08_1', taskIndex: 2,  isRead: false, title: 'Nhắc việc: Sắp đến hạn', message: 'Nhiệm vụ tuần tra ATGT đường bộ đến hạn trong 5 ngày, cần chuẩn bị kế hoạch triển khai' },
+    { username: 'tp_pc07',   taskIndex: 3,  isRead: true,  title: 'Nhiệm vụ mới được giao', message: 'PC07 được giao chủ trì kiểm tra an toàn PCCC tại các cơ sở sản xuất kinh doanh' },
+    { username: 'tp_ph01',   taskIndex: 15, isRead: false, title: 'Cảnh báo: Nhiệm vụ quá hạn', message: 'Nhiệm vụ Quyết toán ngân sách quý II/2026 đã quá hạn. Cần nộp bản giải trình ngay.' },
+    { username: 'tp_pk02',   taskIndex: 9,  isRead: false, title: 'Nhiệm vụ khẩn cấp',     message: 'PK02 được giao bảo vệ Kỳ họp thứ 9 HĐND tỉnh, cần lên phương án triển khai ngay' },
+    { username: 'tp_pv01',   taskIndex: 7,  isRead: true,  title: 'Nhắc việc: Sắp đến hạn', message: 'Nhiệm vụ xây dựng kế hoạch 6 tháng cuối năm còn 7 ngày, cần đẩy nhanh tiến độ' },
+    { username: 'tp_pa05',   taskIndex: 4,  isRead: false, title: 'Nhiệm vụ mới được giao', message: 'PA05 được giao điều tra tội phạm lừa đảo chiếm đoạt tài sản qua mạng' },
+    { username: 'tp_px01',   taskIndex: 6,  isRead: false, title: 'Nhiệm vụ mới được giao', message: 'PX01 được giao chủ trì đánh giá, xếp loại cán bộ chiến sĩ năm 2026' },
+    { username: 'tp_pa02',   taskIndex: 11, isRead: false, title: 'Nhiệm vụ mới được giao', message: 'PA02 được giao chủ trì phòng chống tuyên truyền chống phá Nhà nước trên mạng xã hội' },
+    { username: 'tp_pa04',   taskIndex: 16, isRead: false, title: 'Nhiệm vụ mới được giao', message: 'PA04 được giao điều tra vụ tham nhũng trong đấu thầu dự án đầu tư công' },
   ];
 
   for (const n of notificationsData) {
     const task = taskMap.get(n.taskIndex);
     const uid = userMap.get(n.username)?.id;
     if (uid && task) {
-      const exists = await notificationRepository.findOne({
-        where: { userId: uid, title: n.title },
-      });
-      if (!exists) {
-        await notificationRepository.save({
-          userId: uid,
-          taskId: task.id,
-          title: n.title,
-          message: n.message,
-          isRead: n.isRead,
-        });
-        console.log(`  ✓ [${n.username}] ${n.title}`);
-      }
+      await notificationRepository.save({ userId: uid, taskId: task.id, title: n.title, message: n.message, isRead: n.isRead });
+      console.log(`  ✓ [${n.username}] ${n.title}`);
     }
   }
 
-  const taskHistories = await taskHistoryRepository.find();
-  const taskResultHistories = await taskResultHistoryRepository.find();
-  const loginLogs = await loginLogRepository.find();
+  // ───────────────────────────────────────────
+  // SUMMARY
+  // ───────────────────────────────────────────
+  console.log('\n✅ Seed data hoàn thành!');
+  console.log('\n📊 Tổng kết:');
+  console.log(`  Đơn vị  : ${deptData.length}`);
+  console.log(`  Người dùng: ${usersData.length}`);
+  console.log(`  Công việc : ${tasksData.length}`);
+  console.log(`  Kết quả   : ${resultsData.length}`);
+  console.log(`  Thông báo : ${notificationsData.length}`);
 
-  console.log('\n✅ Seed data completed successfully!');
-  console.log('\n📊 Summary:');
-  console.log(`  Departments: ${allDepartments.length}`);
-  console.log(`  Users: ${userMap.size}`);
-  console.log(`  Tasks: ${taskMap.size}`);
-  console.log(`  Task Results: ${results.length}`);
-  console.log(`  Task Histories: ${taskHistories.length}`);
-  console.log(`  Task Result Histories: ${taskResultHistories.length}`);
-  console.log(`  Login Logs: ${loginLogs.length}`);
-  console.log(`  Notifications: 5`);
-  console.log('\n🔐 Tài khoản mặc định (mật khẩu: 123456):');
-  console.log('  admin        → Quản trị hệ thống (xem tất cả)');
-  console.log('  truong_cao   → Phụ trách CAO  (thấy: task 0,1,2,15)');
-  console.log('  cshs1        → Cán bộ CAO     (thấy: task 0,1,2,15)');
-  console.log('  truong_catq  → Phụ trách CATQ (thấy: task 0,3,4,17)');
-  console.log('  csatxh1      → Cán bộ CATQ    (thấy: task 0,3,4,17)');
-  console.log('  truong_csgt  → Phụ trách CSGT (thấy: task 5,6,7)');
-  console.log('  csgt1        → Cán bộ CSGT    (thấy: task 5,6,7)');
-  console.log('  truong_cacd  → Phụ trách CACD (thấy: task 6,7)');
-  console.log('  truong_pccc  → Phụ trách PCCC (thấy: task 10,11)');
-  console.log('  truong_qltt  → Phụ trách QLTT (thấy: task 12,16)');
-  console.log('  truong_tcdh  → Phụ trách TCDH (thấy: task 15)');
-  console.log('  truong_atkt  → Phụ trách ATKT (thấy: task 12,16)');
+  console.log('\n🔐 Tài khoản demo (mật khẩu: 123456):');
+  console.log('  admin      → Quản trị hệ thống (Phòng Tham mưu - PV01)');
+  console.log('  tp_pc02    → Trưởng phòng Cảnh sát hình sự (PC02)');
+  console.log('  tp_pc04    → Trưởng phòng Cảnh sát ma túy (PC04)');
+  console.log('  tp_pc08    → Trưởng phòng Cảnh sát giao thông (PC08)');
+  console.log('  tp_pc07    → Trưởng phòng Cảnh sát PCCC (PC07)');
+  console.log('  tp_pa05    → Trưởng phòng An ninh mạng (PA05)');
+  console.log('  tp_ph01    → Trưởng phòng Tài chính (PH01)');
+  console.log('  tp_pv01    → Trưởng phòng Tham mưu (PV01)');
+  console.log('  cb_pc02_1  → Cán bộ Phòng Cảnh sát hình sự');
+  console.log('  cb_pc04_1  → Cán bộ Phòng Cảnh sát ma túy');
+  console.log('  ... (39 tài khoản, tất cả mật khẩu: 123456)');
 
   await dataSource.destroy();
 }
 
 seed().catch((error) => {
-  console.error('Seed failed:', error);
+  console.error('Seed thất bại:', error);
   process.exit(1);
 });
