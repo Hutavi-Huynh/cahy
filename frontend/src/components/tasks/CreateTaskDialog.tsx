@@ -136,7 +136,7 @@ export default function CreateTaskDialog({ open, onOpenChange, onSuccess }: Prop
                       <FormControl>
                         <SelectTrigger><SelectValue placeholder="Chọn đơn vị" /></SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent className="max-h-60 overflow-y-auto">
                         {departments?.map((d) => (
                           <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
                         ))}
