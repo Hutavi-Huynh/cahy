@@ -86,13 +86,13 @@ export default function NotificationsPage() {
               <CardContent className="flex gap-3 py-3">
                 <div
                   className={cn(
-                    "mt-1 rounded-full p-1.5",
+                    "mt-0.5 shrink-0 w-7 h-7 rounded-full flex items-center justify-center",
                     notification.isRead ? "bg-muted" : "bg-primary/20",
                   )}
                 >
                   <Bell
                     className={cn(
-                      "h-3 w-3",
+                      "h-3.5 w-3.5",
                       notification.isRead
                         ? "text-muted-foreground"
                         : "text-primary",

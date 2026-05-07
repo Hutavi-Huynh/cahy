@@ -287,7 +287,7 @@ export default function TaskDetailPage() {
                 <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm text-muted-foreground mb-0.5">
-                    Thời hạn
+                    Hạn nộp báo cáo
                   </p>
                   <p
                     className={cn(

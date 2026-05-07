@@ -40,6 +40,7 @@ const schema = z.object({
   content: z.string().optional(),
   linhVuc: z.string().optional(),
   leadDepartmentId: z.string().optional(),
+  cooperatingDepartmentIds: z.array(z.string()).optional(),
   frequency: z.nativeEnum(TaskFrequency),
   deadline: z.string().optional(),
   reminderBefore: z.number().min(0).optional(),
@@ -68,6 +69,7 @@ export default function EditTaskDialog({ open, onOpenChange, task, onSuccess }: 
       content: task.content ?? '',
       linhVuc: task.linhVuc ?? '',
       leadDepartmentId: task.leadDepartmentId ? String(task.leadDepartmentId) : undefined,
+      cooperatingDepartmentIds: task.cooperatingDepartments?.map((d) => String(d.id)) ?? [],
       frequency: task.frequency,
       deadline: task.deadline ? task.deadline.slice(0, 16) : '',
       reminderBefore: task.reminderBefore ?? 0,
@@ -82,6 +84,7 @@ export default function EditTaskDialog({ open, onOpenChange, task, onSuccess }: 
         content: task.content ?? '',
         linhVuc: task.linhVuc ?? '',
         leadDepartmentId: task.leadDepartmentId ? String(task.leadDepartmentId) : undefined,
+        cooperatingDepartmentIds: task.cooperatingDepartments?.map((d) => String(d.id)) ?? [],
         frequency: task.frequency,
         deadline: task.deadline ? task.deadline.slice(0, 16) : '',
         reminderBefore: task.reminderBefore ?? 0,
@@ -95,6 +98,7 @@ export default function EditTaskDialog({ open, onOpenChange, task, onSuccess }: 
       tasksService.update(task.id, {
         ...data,
         leadDepartmentId: data.leadDepartmentId ? Number(data.leadDepartmentId) : undefined,
+        cooperatingDepartmentIds: data.cooperatingDepartmentIds?.map(Number) ?? [],
         deadline: data.deadline || undefined,
       }),
     onSuccess: () => {
@@ -187,6 +191,45 @@ export default function EditTaskDialog({ open, onOpenChange, task, onSuccess }: 
                 )}
               />
             </div>
+            <FormField
+              control={form.control}
+              name="cooperatingDepartmentIds"
+              render={({ field }) => {
+                const leadId = form.watch('leadDepartmentId')
+                const available = departments?.filter((d) => String(d.id) !== leadId) ?? []
+                const selected: string[] = field.value ?? []
+                const toggle = (id: string) =>
+                  field.onChange(
+                    selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id],
+                  )
+                return (
+                  <FormItem>
+                    <FormLabel>Đơn vị phối hợp</FormLabel>
+                    <div className="border rounded-md max-h-28 overflow-y-auto p-2 space-y-1">
+                      {available.length === 0 ? (
+                        <p className="text-xs text-muted-foreground px-1 py-1">Chưa có đơn vị nào</p>
+                      ) : (
+                        available.map((dept) => (
+                          <label
+                            key={dept.id}
+                            className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 px-1 py-0.5 rounded text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selected.includes(String(dept.id))}
+                              onChange={() => toggle(String(dept.id))}
+                              className="h-3.5 w-3.5 accent-primary"
+                            />
+                            {dept.name}
+                          </label>
+                        ))
+                      )}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )
+              }}
+            />
             <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
@@ -225,7 +268,7 @@ export default function EditTaskDialog({ open, onOpenChange, task, onSuccess }: 
               name="deadline"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Thời hạn</FormLabel>
+                  <FormLabel>Hạn nộp báo cáo</FormLabel>
                   <FormControl><Input type="datetime-local" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
