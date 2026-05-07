@@ -2,7 +2,16 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { FileDown, Filter, X, ClipboardList, Clock, CheckCircle, AlertTriangle, PauseCircle } from "lucide-react";
+import {
+  FileDown,
+  Filter,
+  X,
+  ClipboardList,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  PauseCircle,
+} from "lucide-react";
 import * as XLSX from "xlsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -203,83 +212,88 @@ export default function ReportsPage() {
             <Skeleton key={i} className="h-32" />
           ))}
         </div>
-      ) : (() => {
-        const tot = summary?.total ?? 0
-        const pct = (n: number) => tot > 0 ? Math.round((n / tot) * 100) : 0
-        const cards = [
-          {
-            label: "Tổng cộng",
-            value: tot,
-            icon: ClipboardList,
-            gradient: "from-blue-500 to-blue-700",
-            sub: "Tất cả nhiệm vụ",
-            pct: null,
-          },
-          {
-            label: "Chưa thực hiện",
-            value: summary?.pending ?? 0,
-            icon: PauseCircle,
-            gradient: "from-slate-500 to-slate-700",
-            sub: "Chờ triển khai",
-            pct: pct(summary?.pending ?? 0),
-          },
-          {
-            label: "Đang thực hiện",
-            value: summary?.inProgress ?? 0,
-            icon: Clock,
-            gradient: "from-amber-400 to-orange-500",
-            sub: "Đang trong tiến độ",
-            pct: pct(summary?.inProgress ?? 0),
-          },
-          {
-            label: "Hoàn thành",
-            value: summary?.completed ?? 0,
-            icon: CheckCircle,
-            gradient: "from-emerald-500 to-green-700",
-            sub: "Đã hoàn tất",
-            pct: pct(summary?.completed ?? 0),
-          },
-          {
-            label: "Quá hạn",
-            value: summary?.overdue ?? 0,
-            icon: AlertTriangle,
-            gradient: "from-red-500 to-rose-700",
-            sub: "Cần xử lý gấp",
-            pct: pct(summary?.overdue ?? 0),
-          },
-        ]
-        return (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-            {cards.map((card) => (
-              <Card
-                key={card.label}
-                className={`bg-gradient-to-br ${card.gradient} border-0 text-white overflow-hidden`}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <p className="text-xs font-medium text-white/80 leading-tight">
-                      {card.label}
-                    </p>
-                    <div className="bg-white/20 p-1.5 rounded-lg shrink-0">
-                      <card.icon className="h-4 w-4 text-white" />
+      ) : (
+        (() => {
+          const tot = summary?.total ?? 0;
+          const pct = (n: number) =>
+            tot > 0 ? Math.round((n / tot) * 100) : 0;
+          const cards = [
+            {
+              label: "Tổng cộng",
+              value: tot,
+              icon: ClipboardList,
+              gradient: "from-blue-500 to-blue-700",
+              sub: "Tất cả nhiệm vụ",
+              pct: null,
+            },
+            {
+              label: "Chưa thực hiện",
+              value: summary?.pending ?? 0,
+              icon: PauseCircle,
+              gradient: "from-slate-500 to-slate-700",
+              sub: "Chờ triển khai",
+              pct: pct(summary?.pending ?? 0),
+            },
+            {
+              label: "Đang thực hiện",
+              value: summary?.inProgress ?? 0,
+              icon: Clock,
+              gradient: "from-amber-400 to-orange-500",
+              sub: "Đang trong tiến độ",
+              pct: pct(summary?.inProgress ?? 0),
+            },
+            {
+              label: "Hoàn thành",
+              value: summary?.completed ?? 0,
+              icon: CheckCircle,
+              gradient: "from-emerald-500 to-green-700",
+              sub: "Đã hoàn tất",
+              pct: pct(summary?.completed ?? 0),
+            },
+            {
+              label: "Quá hạn",
+              value: summary?.overdue ?? 0,
+              icon: AlertTriangle,
+              gradient: "from-red-500 to-rose-700",
+              sub: "Cần xử lý gấp",
+              pct: pct(summary?.overdue ?? 0),
+            },
+          ];
+          return (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+              {cards.map((card) => (
+                <Card
+                  key={card.label}
+                  className={`bg-gradient-to-br ${card.gradient} border-0 text-white overflow-hidden`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <p className="text-base font-medium text-white/80 leading-tight">
+                        {card.label}
+                      </p>
+                      <div className="bg-white/20 p-1.5 rounded-xl shrink-0">
+                        <card.icon className="h-5 w-5 text-white" />
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-4xl font-bold tracking-tight mb-1">
-                    {card.value}
-                  </div>
-                  <p className="text-xs text-white/60">{card.sub}</p>
-                  {card.pct !== null && (
-                    <div className="mt-2 pt-2 border-t border-white/20 flex items-center justify-between text-xs text-white/70">
-                      <span>Tỷ lệ</span>
-                      <span className="font-semibold text-white">{card.pct}%</span>
+                    <div className="text-5xl font-bold tracking-tight mb-1">
+                      {card.value}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )
-      })()}
+                    <p className="text-xs text-white/60">{card.sub}</p>
+                    {card.pct !== null && (
+                      <div className="mt-2 pt-2 border-t border-white/20 flex items-center justify-between text-xs text-white/70">
+                        <span>Tỷ lệ</span>
+                        <span className="font-semibold text-white">
+                          {card.pct}%
+                        </span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          );
+        })()
+      )}
 
       {/* Thống kê theo đơn vị */}
       <Card>

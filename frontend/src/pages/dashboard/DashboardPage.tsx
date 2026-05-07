@@ -210,6 +210,7 @@ export default function DashboardPage() {
       value: unitTotal,
       icon: ClipboardList,
       gradient: "from-blue-500 to-blue-700",
+      subtitle: "Tất cả nhiệm vụ được giao",
       pct: null,
     },
     {
@@ -217,6 +218,7 @@ export default function DashboardPage() {
       value: unitInProgress,
       icon: Clock,
       gradient: "from-amber-400 to-orange-500",
+      subtitle: "Đang trong tiến độ",
       pct: unitTotal > 0 ? Math.round((unitInProgress / unitTotal) * 100) : 0,
     },
     {
@@ -224,6 +226,7 @@ export default function DashboardPage() {
       value: unitCompleted,
       icon: CheckCircle,
       gradient: "from-emerald-500 to-green-700",
+      subtitle: "Đã hoàn tất đúng hạn",
       pct: unitTotal > 0 ? Math.round((unitCompleted / unitTotal) * 100) : 0,
     },
     {
@@ -231,7 +234,59 @@ export default function DashboardPage() {
       value: unitOverdue,
       icon: AlertTriangle,
       gradient: "from-red-500 to-rose-700",
+      subtitle: "Cần xử lý và giải trình",
       pct: unitTotal > 0 ? Math.round((unitOverdue / unitTotal) * 100) : 0,
+    },
+  ];
+
+  const unitChartData = [
+    {
+      name: "Chờ xử lý",
+      value: tasks?.filter((t) => t.status === TaskStatus.PENDING).length ?? 0,
+      color: "#f59e0b",
+    },
+    { name: "Đang thực hiện", value: unitInProgress, color: "#3b82f6" },
+    { name: "Hoàn thành", value: unitCompleted, color: "#22c55e" },
+    { name: "Quá hạn", value: unitOverdue, color: "#ef4444" },
+  ].filter((d) => d.value > 0);
+
+  const unitCompletionRate =
+    unitTotal > 0 ? Math.round((unitCompleted / unitTotal) * 100) : 0;
+  const unitOverdueRate =
+    unitTotal > 0 ? Math.round((unitOverdue / unitTotal) * 100) : 0;
+  const unitOnTimeRate =
+    unitCompleted + unitOverdue > 0
+      ? Math.round((unitCompleted / (unitCompleted + unitOverdue)) * 100)
+      : 100;
+  const unitProcessingRate =
+    unitTotal > 0
+      ? Math.round(((unitCompleted + unitInProgress) / unitTotal) * 100)
+      : 0;
+
+  const unitPerfMetrics = [
+    {
+      label: "Tỷ lệ hoàn thành",
+      value: unitCompletionRate,
+      color: "bg-green-500",
+      textColor: "text-green-600",
+    },
+    {
+      label: "Đúng hạn (trong số đã xong)",
+      value: unitOnTimeRate,
+      color: "bg-blue-500",
+      textColor: "text-blue-600",
+    },
+    {
+      label: "Đang xử lý + Hoàn thành",
+      value: unitProcessingRate,
+      color: "bg-yellow-500",
+      textColor: "text-yellow-600",
+    },
+    {
+      label: "Tỷ lệ quá hạn",
+      value: unitOverdueRate,
+      color: "bg-red-500",
+      textColor: "text-red-600",
     },
   ];
 
@@ -410,45 +465,117 @@ export default function DashboardPage() {
         </>
       ) : (
         <>
-          {/* Unit: 4 stat cards in one row */}
-          <div className="grid grid-cols-4 gap-4">
-            {unitStatsCards.map((card) => (
-              <Card
-                key={card.title}
-                className={`bg-linear-to-br ${card.gradient} border-0 text-white overflow-hidden`}
-              >
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-white/80 mb-2">
-                        {card.title}
-                      </p>
-                      {tasksLoading ? (
-                        <Skeleton className="h-9 w-16 bg-white/30" />
-                      ) : (
-                        <div className="text-4xl font-bold tracking-tight">
-                          {card.value}
+          {/* Unit: 2x2 stat cards + biểu đồ (giống layout Admin) */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              {unitStatsCards.map((card) => (
+                <Card
+                  key={card.title}
+                  className={`bg-linear-to-br ${card.gradient} border-0 text-white overflow-hidden`}
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="text-lg font-medium text-white/80 mb-3">
+                          {card.title}
+                        </p>
+                        {tasksLoading ? (
+                          <Skeleton className="h-10 w-20 bg-white/30" />
+                        ) : (
+                          <div className="text-5xl font-bold tracking-tight">
+                            {card.value}
+                          </div>
+                        )}
+                        <p className="text-xs text-white/60 mt-2">
+                          {card.subtitle}
+                        </p>
+                      </div>
+                      <div className="bg-white/20 p-3 rounded-2xl shrink-0">
+                        <card.icon className="h-8 w-8 text-white" />
+                      </div>
+                    </div>
+                    {card.pct !== null && (
+                      <div className="mt-4 pt-3 border-t border-white/20 flex items-center justify-between text-xs text-white/70">
+                        <span>Tỷ lệ / tổng số</span>
+                        <span className="font-semibold text-white">
+                          {card.pct}%
+                        </span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <Card className="flex flex-col">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  Biểu đồ & Hiệu suất
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4 flex-1">
+                {tasksLoading ? (
+                  <Skeleton className="h-48 w-full" />
+                ) : (
+                  <>
+                    {unitChartData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={180}>
+                        <PieChart>
+                          <Pie
+                            data={unitChartData}
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={72}
+                            paddingAngle={2}
+                            dataKey="value"
+                          >
+                            {unitChartData.map((entry, index) => (
+                              <Cell key={index} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            separator=""
+                            formatter={(value) => [`${value} công việc`, ""]}
+                          />
+                          <Legend
+                            iconType="circle"
+                            iconSize={8}
+                            wrapperStyle={{ fontSize: "11px" }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-44 flex items-center justify-center text-muted-foreground text-sm">
+                        Chưa có dữ liệu
+                      </div>
+                    )}
+                    <div className="space-y-2.5 border-t pt-3">
+                      {unitPerfMetrics.map((m) => (
+                        <div key={m.label}>
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="text-muted-foreground">
+                              {m.label}
+                            </span>
+                            <span className={`font-semibold ${m.textColor}`}>
+                              {m.value}%
+                            </span>
+                          </div>
+                          <Progress
+                            value={m.value}
+                            className="h-1.5"
+                            indicatorClassName={m.color}
+                          />
                         </div>
-                      )}
+                      ))}
                     </div>
-                    <div className="bg-white/20 p-2.5 rounded-xl shrink-0">
-                      <card.icon className="h-6 w-6 text-white" />
-                    </div>
-                  </div>
-                  {card.pct !== null && (
-                    <div className="mt-3 pt-2.5 border-t border-white/20 flex items-center justify-between text-xs text-white/70">
-                      <span>Tỷ lệ / tổng số</span>
-                      <span className="font-semibold text-white">
-                        {card.pct}%
-                      </span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Unit: tabs for lead vs cooperating */}
+          {/* Unit: tabs Chủ trì / Phối hợp */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle>Danh sách công việc</CardTitle>
@@ -475,10 +602,7 @@ export default function DashboardPage() {
                   <TaskTable tasks={leadTasks} loading={tasksLoading} />
                 </TabsContent>
                 <TabsContent value="cooperating">
-                  <TaskTable
-                    tasks={cooperatingTasks}
-                    loading={tasksLoading}
-                  />
+                  <TaskTable tasks={cooperatingTasks} loading={tasksLoading} />
                 </TabsContent>
               </Tabs>
             </CardContent>
